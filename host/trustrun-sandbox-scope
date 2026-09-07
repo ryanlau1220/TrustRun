@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+[ "$(id -u)" = 0 ] || { echo "run through pnpm sandbox" >&2; exit 1; }
+owner=$(cat /etc/trustrun/sandbox-owner)
+case "$owner" in ""|*[!A-Za-z0-9_-]*) echo "invalid sandbox owner" >&2; exit 1;; esac
+[ "${SUDO_USER:-}" = "$owner" ] || { echo "sandbox owner mismatch" >&2; exit 1; }
+socket=${TRUSTRUN_SESSION_SOCKET:?TRUSTRUN_SESSION_SOCKET is required}
+node_bin=${TRUSTRUN_NODE_BIN:?TRUSTRUN_NODE_BIN is required}
+workspace=$(pwd -P)
+[ -S "$socket" ] && [ "$(stat -c %U "$socket")" = "$owner" ] || { echo "invalid session socket" >&2; exit 1; }
+[ -f "$node_bin" ] && [ -x "$node_bin" ] || { echo "invalid Node executable" >&2; exit 1; }
+[ "$(stat -c %U "$workspace")" = "$owner" ] || { echo "workspace must be owned by the sandbox owner" >&2; exit 1; }
+
+exec env -i \
+  PATH=/usr/sbin:/usr/bin:/sbin:/bin \
+  TRUSTRUN_SESSION_SOCKET="$socket" \
+  TRUSTRUN_NODE_BIN="$node_bin" \
+  /usr/bin/systemd-run --quiet --collect --wait --pipe \
+  --uid="$owner" --gid="$(id -gn "$owner")" --working-directory="$workspace" \
+  --setenv="TRUSTRUN_SESSION_SOCKET=$socket" --setenv="TRUSTRUN_NODE_BIN=$node_bin" \
+  --property=KillMode=control-group --property=NoNewPrivileges=yes \
+  /usr/local/lib/trustrun-runtime/sandbox-run -- "$@"
