@@ -29,9 +29,9 @@ fi
 [ ! -e /etc/systemd/system/my-api.service ] || cmp -s "$source_root/host/my-api.service" /etc/systemd/system/my-api.service || { echo "refusing to replace existing my-api.service" >&2; exit 1; }
 
 install -d -m 0755 /usr/local/libexec /usr/local/lib/trustrun-executor /usr/local/lib/trustrun-runtime /etc/sudoers.d /etc/trustrun /var/lib/trustrun-executor
+install -o root -g root -m 0755 "$source_root/host/install-root" /usr/local/lib/trustrun-runtime/install-root
+install -o root -g root -m 0755 "$source_root/host/trustrun-install" /usr/local/libexec/trustrun-install
 if [ "$bootstrap" = 1 ]; then
-  install -o root -g root -m 0755 "$source_root/host/install-root" /usr/local/lib/trustrun-runtime/install-root
-  install -o root -g root -m 0755 "$source_root/host/trustrun-install" /usr/local/libexec/trustrun-install
   printf '%s\n' "$source_root" >/etc/trustrun/source-root
   chmod 0644 /etc/trustrun/source-root
 fi
