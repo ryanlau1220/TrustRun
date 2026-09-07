@@ -25,7 +25,7 @@ fi
 unit="trustrun-sandbox-$$"
 cleanup() {
   /usr/bin/systemctl stop "$unit" >/dev/null 2>&1 || true
-  [ -z "${gateway:-}" ] || kill -TERM -- "-$gateway" >/dev/null 2>&1 || true
+  [ -z "${gateway_unit:-}" ] || /usr/bin/systemctl stop "$gateway_unit" >/dev/null 2>&1 || true
 }
 trap 'cleanup; exit 130' INT TERM HUP
 trap cleanup EXIT
@@ -34,10 +34,17 @@ if [ "$mode" = codex-demo ]; then
   set -a
   . /etc/trustrun/openai.env
   set +a
-  umask 077
-  /usr/bin/setsid /usr/sbin/runuser -u "$owner" -- env -i PATH=/usr/bin:/bin OPENAI_API_KEY="$OPENAI_API_KEY" TRUSTRUN_MODEL_SOCKET="$model_socket" "$node_bin" /usr/local/lib/trustrun-runtime/model-gateway.mjs &
-  gateway=$!
-  while [ ! -S "$model_socket" ]; do sleep 0.05; done
+  gateway_unit="trustrun-model-gateway-$$"
+  env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/systemd-run --quiet --collect --unit="$gateway_unit" \
+    --uid="$owner" --gid="$(id -gn "$owner")" --setenv="OPENAI_API_KEY=$OPENAI_API_KEY" --setenv="TRUSTRUN_MODEL_SOCKET=$model_socket" \
+    --property=KillMode=control-group --property=NoNewPrivileges=yes \
+    "$node_bin" /usr/local/lib/trustrun-runtime/model-gateway.mjs
+  attempts=0
+  while [ ! -S "$model_socket" ]; do
+    attempts=$((attempts + 1))
+    [ "$attempts" -lt 100 ] || { echo "TrustRun model gateway did not start" >&2; exit 1; }
+    sleep 0.05
+  done
   [ "$(stat -c %U "$model_socket")" = "$owner" ] || { echo "invalid model gateway socket" >&2; exit 1; }
   set -- -- /run/trustrun/sandbox-codex-demo
 fi
