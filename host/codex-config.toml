@@ -1,0 +1,14 @@
+model_provider = "trustrun-openai"
+model = "gpt-5.3-codex"
+approval_policy = "never"
+
+[model_providers.trustrun-openai]
+name = "TrustRun OpenAI gateway"
+base_url = "http://127.0.0.1:8787/v1"
+env_key = "TRUSTRUN_MODEL_GATEWAY_TOKEN"
+wire_api = "responses"
+
+[mcp_servers.trustrun]
+command = "node"
+args = ["/run/trustrun/mcp-bridge.mjs"]
+enabled_tools = ["service.status", "service.restart"]

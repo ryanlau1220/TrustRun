@@ -11,6 +11,20 @@ node_prefix=$(CDPATH= cd -- "$node_dir/.." && pwd)
 [ "${1:-}" = "--" ] || { echo "usage: $0 -- AGENT [ARGS...]" >&2; exit 2; }
 shift
 
+if [ "${TRUSTRUN_CODEX_DEMO:-}" = 1 ]; then
+  model_socket=${TRUSTRUN_MODEL_SOCKET:?TRUSTRUN_MODEL_SOCKET is required}
+  codex_bin=${TRUSTRUN_CODEX_BIN:?TRUSTRUN_CODEX_BIN is required}
+  [ -S "$model_socket" ] && [ -f "$codex_bin" ] && [ -x "$codex_bin" ] || { echo "TrustRun Codex demo is unavailable" >&2; exit 1; }
+  exec bwrap --die-with-parent --new-session --unshare-all --unshare-user --disable-userns --assert-userns-disabled \
+    --clearenv --setenv HOME /tmp --setenv PATH "$node_dir:/usr/bin:/bin" --setenv TRUSTRUN_SESSION_SOCKET /run/trustrun/session.sock --setenv TRUSTRUN_MODEL_SOCKET /run/trustrun/model.sock --setenv TRUSTRUN_MODEL_GATEWAY_TOKEN trustrun-session \
+    --proc /proc --dev /dev --tmpfs /tmp --dir /run/trustrun \
+    --ro-bind /usr/bin /usr/bin --ro-bind /usr/lib /usr/lib --ro-bind-try /usr/share /usr/share --ro-bind /lib /lib --ro-bind /lib64 /lib64 --ro-bind /bin /bin \
+    --ro-bind /etc/ssl/certs /etc/ssl/certs --dir "$(dirname "$node_prefix")" --ro-bind "$node_prefix" "$node_prefix" --bind "$workspace" /workspace --tmpfs /workspace/.git --ro-bind-try "$workspace/node_modules" /workspace/node_modules --bind "$socket" /run/trustrun/session.sock \
+    --bind "$model_socket" /run/trustrun/model.sock --ro-bind /usr/local/lib/trustrun-runtime/model-bridge.mjs /run/trustrun/model-bridge.mjs \
+    --ro-bind /usr/local/lib/trustrun-runtime/mcp-bridge.mjs /run/trustrun/mcp-bridge.mjs --ro-bind /usr/local/lib/trustrun-runtime/codex-config.toml /run/trustrun/codex-config.toml \
+    --ro-bind "$codex_bin" /run/trustrun/codex --chdir /workspace -- "$@"
+fi
+
 exec bwrap --die-with-parent --new-session --unshare-all --unshare-user --disable-userns --assert-userns-disabled \
   --clearenv --setenv HOME /tmp --setenv PATH "$node_dir:/usr/bin:/bin" --setenv TRUSTRUN_SESSION_SOCKET /run/trustrun/session.sock \
   --proc /proc --dev /dev --tmpfs /tmp --dir /run/trustrun \
