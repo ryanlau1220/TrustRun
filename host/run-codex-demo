@@ -1,11 +1,4 @@
 #!/bin/sh
 set -eu
 
-mkdir -p /tmp/codex
-cp /run/trustrun/codex-config.toml /tmp/codex/config.toml
-chmod 0600 /tmp/codex/config.toml
-node /run/trustrun/model-bridge.mjs &
-bridge=$!
-cleanup() { kill "$bridge" 2>/dev/null || true; }
-trap cleanup EXIT INT TERM HUP
-CODEX_HOME=/tmp/codex /run/trustrun/codex --dangerously-bypass-approvals-and-sandbox
+exec "$(dirname "$0")/run-session" --codex-demo

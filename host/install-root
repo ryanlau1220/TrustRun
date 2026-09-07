@@ -44,6 +44,7 @@ install -o root -g root -m 0644 "$source_root/host/codex-config.toml" /usr/local
 install -o root -g root -m 0644 "$source_root/sandbox/mcp-bridge.mjs" /usr/local/lib/trustrun-runtime/mcp-bridge.mjs
 install -o root -g root -m 0755 "$source_root/host/run-session" /usr/local/lib/trustrun-runtime/run-session
 install -o root -g root -m 0755 "$source_root/host/run-codex-demo" /usr/local/lib/trustrun-runtime/run-codex-demo
+install -o root -g root -m 0755 "$source_root/sandbox/run-codex-demo" /usr/local/lib/trustrun-runtime/sandbox-codex-demo
 install -o root -g root -m 0755 "$source_root/sandbox/run" /usr/local/lib/trustrun-runtime/sandbox-run
 install -o root -g root -m 0755 "$source_root/host/trustrun-sandbox-scope" /usr/local/libexec/trustrun-sandbox-scope
 install -d -o root -g root -m 0755 /usr/local/lib/trustrun-runtime/node_modules
