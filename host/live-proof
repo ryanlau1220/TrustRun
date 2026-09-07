@@ -5,7 +5,15 @@ set -eu
 [ "$(id -u)" = 0 ] || { echo "run through pnpm host:live-proof" >&2; exit 1; }
 owner=${SUDO_USER:?SUDO_USER is required}
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-node_bin=$(command -v node)
+node_bin=
+for directory in $(printf %s "$PATH" | tr : ' '); do
+  candidate=$directory/node
+  if [ -x "$candidate" ] && sudo -n -u trustrun-executor "$candidate" --version >/dev/null 2>&1; then
+    node_bin=$candidate
+    break
+  fi
+done
+[ -n "$node_bin" ] || { echo "no Node executable is available to trustrun-executor" >&2; exit 1; }
 runtime=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/trustrun-proof.XXXXXX")
 cert=/var/lib/trustrun-executor/executor.crt
 key=/var/lib/trustrun-executor/executor.key
