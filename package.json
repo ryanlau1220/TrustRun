@@ -1,9 +1,16 @@
 {
   "name": "trustrun",
   "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "packageManager": "pnpm@10.32.1",
   "type": "module",
   "scripts": {
+    "executor:test": "node executor/test.mjs",
+    "contract:build": "cd contract && cargo build --target wasm32-wasip2 --release",
+    "mcp": "node mcp/server.mjs",
+    "sandbox": "host/run-session --",
     "t3:preflight": "tsx scripts/t3-preflight.ts"
   },
   "devDependencies": {

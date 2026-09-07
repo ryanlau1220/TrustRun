@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+runtime=${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is required}/trustrun
+mkdir -p -m 700 "$runtime"
+: "${T3N_API_KEY:?T3N_API_KEY is required}"
+session_dir=$(mktemp -d "$runtime/session.XXXXXX")
+socket=$session_dir/session.sock
+cleanup() {
+  kill "$proxy" 2>/dev/null || true
+  rm -rf "$session_dir"
+}
+TRUSTRUN_SESSION_SOCKET=$socket node "$(dirname "$0")/session-proxy.mjs" &
+proxy=$!
+trap cleanup EXIT INT TERM
+while [ ! -S "$socket" ]; do sleep 0.05; done
+TRUSTRUN_SESSION_SOCKET=$socket "$(dirname "$0")/../sandbox/run" "$@"
