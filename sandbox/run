@@ -3,6 +3,9 @@ set -eu
 
 socket=${TRUSTRUN_SESSION_SOCKET:?TRUSTRUN_SESSION_SOCKET is required}
 workspace=$(pwd)
+node_bin=$(command -v node)
+node_dir=$(dirname "$node_bin")
+node_prefix=$(CDPATH= cd -- "$node_dir/.." && pwd)
 [ -S "$socket" ] || { echo "TrustRun session socket is unavailable" >&2; exit 1; }
 [ ! -e "$workspace/.env" ] || { echo "Refusing to mount a workspace containing .env" >&2; exit 1; }
 [ "${1:-}" = "--" ] || { echo "usage: $0 -- AGENT [ARGS...]" >&2; exit 2; }
@@ -12,8 +15,8 @@ exec systemd-run --user --scope --quiet --collect \
   --property=KillMode=control-group \
   --property=NoNewPrivileges=yes \
   bwrap --die-with-parent --new-session --unshare-all --unshare-user --disable-userns --assert-userns-disabled \
-  --clearenv --setenv HOME /tmp --setenv PATH /usr/bin:/bin --setenv TRUSTRUN_SESSION_SOCKET /run/trustrun/session.sock \
+  --clearenv --setenv HOME /tmp --setenv PATH "$node_dir:/usr/bin:/bin" --setenv TRUSTRUN_SESSION_SOCKET /run/trustrun/session.sock \
   --proc /proc --dev /dev --tmpfs /tmp --dir /run/trustrun \
-  --ro-bind /usr /usr --ro-bind /lib /lib --ro-bind /lib64 /lib64 --ro-bind /bin /bin \
-  --ro-bind /etc/ssl/certs /etc/ssl/certs --bind "$workspace" /workspace --ro-bind-try "$workspace/node_modules" /workspace/node_modules --bind "$socket" /run/trustrun/session.sock \
+  --ro-bind /usr/bin /usr/bin --ro-bind /usr/lib /usr/lib --ro-bind-try /usr/share /usr/share --ro-bind /lib /lib --ro-bind /lib64 /lib64 --ro-bind /bin /bin \
+  --ro-bind /etc/ssl/certs /etc/ssl/certs --dir "$(dirname "$node_prefix")" --ro-bind "$node_prefix" "$node_prefix" --bind "$workspace" /workspace --ro-bind-try "$workspace/node_modules" /workspace/node_modules --bind "$socket" /run/trustrun/session.sock \
   --chdir /workspace -- "$@"
