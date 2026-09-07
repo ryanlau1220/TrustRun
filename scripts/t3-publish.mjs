@@ -28,6 +28,10 @@ export function isMapAlreadyExists(error) {
   return error instanceof Error && /\bmap already exists\b/i.test(error.message);
 }
 
+export function isContractVersionAlreadyRegistered(error) {
+  return error instanceof Error && /contract version invalid: version .+ is not higher than current version/i.test(error.message);
+}
+
 function required(name) {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required`);
@@ -78,6 +82,11 @@ async function main() {
 
 if (import.meta.main) {
   main().catch((error) => {
+    if (isContractVersionAlreadyRegistered(error)) {
+      console.error(`TrustRun publish failed: contract ${CONTRACT_VERSION} is immutable. Reuse its fixed HTTPS origin or publish a higher contract version for a new origin.`);
+      process.exitCode = 1;
+      return;
+    }
     const message = error instanceof Error ? error.message.replace(/\s+/g, " ").slice(0, 240) : "unknown error";
     console.error(`TrustRun publish failed: ${message}`);
     process.exitCode = 1;
