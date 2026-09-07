@@ -1,0 +1,17 @@
+{
+  "name": "trustrun",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "type": "module",
+  "scripts": {
+    "t3:preflight": "tsx scripts/t3-preflight.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@terminal3/t3n-sdk": "^5.10.0"
+  }
+}

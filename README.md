@@ -33,3 +33,7 @@ The host OS, TrustRun runtime, executor, policy/configuration, and Terminal 3 pa
 Before implementing the broader runtime, prove that Terminal 3 can make a fixed, allowlisted HTTPS call to the executor using an authentication credential unavailable to the agent. If client-certificate mTLS is unsupported, a T3-held high-entropy bearer over validated TLS is acceptable for the demo.
 
 See [HANDOFF.md](HANDOFF.md) for the complete design record and [AGENTS.md](AGENTS.md) for implementation constraints.
+
+## Development prerequisite
+
+Terminal 3 ADK is a TypeScript/JavaScript client SDK with Rust-to-WASM TEE contracts; it is not an agent framework. After claiming a testnet key and credits, keep the key out of the repository and run the trusted-host preflight with `T3N_API_KEY='…' pnpm t3:preflight`. Do not run this from the agent sandbox.

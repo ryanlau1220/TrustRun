@@ -23,3 +23,11 @@ Do not add approval flows, generic policies, targets, service IDs, shell/SSH/Doc
 - The agent cannot obtain the executor credential or alter trusted configuration.
 - Restarting another service, using unknown inputs, or restarting during cooldown fails.
 - Session exit prevents new requests and kills the sandbox cgroup; an already-dispatched bounded operation may finish.
+
+## Terminal 3 ADK prerequisites
+
+- Use the official TypeScript/JavaScript SDK from a plain Node ESM process; do not introduce a bundler for the proof.
+- Keep `T3N_API_KEY` in the trusted host environment only. Never write it to the workspace, commit it, or make it available to the sandbox.
+- Run `pnpm t3:preflight` successfully against testnet before creating the contract. Its returned tenant DID is opaque: use the authenticated value, never derive or hardcode it.
+- Keep the TEE contract in a separate Rust crate compiled for `wasm32-wasip2`.
+- T3 outbound HTTP permission comes from the caller's explicit grant. Grant only the fixed executor hostname before invocation; contracts do not self-authorize egress.

@@ -1,0 +1,9 @@
+node_modules/
+target/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
