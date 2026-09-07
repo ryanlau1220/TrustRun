@@ -1,0 +1,40 @@
+#!/bin/sh
+set -eu
+
+: "${T3N_API_KEY:?T3N_API_KEY is required}"
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+node_bin=$(command -v node)
+runtime=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/trustrun-proof.XXXXXX")
+cert=/var/lib/trustrun-executor/executor.crt
+key=/var/lib/trustrun-executor/executor.key
+state=/var/lib/trustrun-executor/state.db
+bearer=$(openssl rand -base64 48)
+
+if [ ! -f "$cert" ] || [ ! -f "$key" ]; then
+  sudo -u trustrun-executor openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -keyout "$key" -out "$cert" >/dev/null 2>&1
+fi
+
+setsid sudo -u trustrun-executor env \
+  TRUSTRUN_EXECUTOR_BEARER="$bearer" \
+  TRUSTRUN_EXECUTOR_TLS_CERT="$cert" \
+  TRUSTRUN_EXECUTOR_TLS_KEY="$key" \
+  TRUSTRUN_EXECUTOR_STATE="$state" \
+  "$node_bin" "$root/executor/server.mjs" >"$runtime/executor.log" 2>&1 < /dev/null &
+
+sleep 1
+code=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' --request POST https://127.0.0.1:8443/v1/service/status)
+[ "$code" = 401 ] || { tail -n 20 "$runtime/executor.log" >&2; exit 1; }
+
+setsid cloudflared tunnel --url https://127.0.0.1:8443 --no-tls-verify >"$runtime/tunnel.log" 2>&1 < /dev/null &
+i=0
+url=
+while [ "$i" -lt 30 ]; do
+  url=$(rg -o 'https://[a-z0-9-]+\.trycloudflare\.com' "$runtime/tunnel.log" | head -n 1 || true)
+  [ -n "$url" ] && break
+  i=$((i + 1))
+  sleep 1
+done
+[ -n "$url" ] || { tail -n 20 "$runtime/tunnel.log" >&2; exit 1; }
+
+TRUSTRUN_EXECUTOR_ORIGIN="$url" TRUSTRUN_EXECUTOR_BEARER="$bearer" pnpm t3:publish
+printf 'TrustRun test origin: %s\n' "$url"
