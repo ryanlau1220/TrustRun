@@ -12,8 +12,8 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(zod@4.5.4)
       '@terminal3/t3n-sdk':
-        specifier: ^5.10.0
-        version: 5.10.0(typescript@5.9.3)
+        specifier: ^4.2.0
+        version: 4.46.0(typescript@5.9.3)
     devDependencies:
       tsx:
         specifier: ^4.23.13
@@ -217,8 +217,8 @@ packages:
     resolution: {integrity: sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==}
     engines: {node: '>= 20.19.0'}
 
-  '@terminal3/t3n-sdk@5.10.0':
-    resolution: {integrity: sha512-9RulrPSEGFlQgxzZx1L8222egYxvw5P8xFCA9ErQ9XV3LwuD2dL5F+bdx9ICiD+yzmCzsUKtA7mToNOSr687Zg==}
+  '@terminal3/t3n-sdk@4.46.0':
+    resolution: {integrity: sha512-s/gFWKTwR52EGubEE8gR3YSqR/jRyo75dBi8d90GCIaP70RJ14f5UEx1EZn7hkD2ibhnLdBoJQ4y0PMYXTdz3A==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
@@ -761,7 +761,7 @@ snapshots:
 
   '@noble/hashes@2.4.0': {}
 
-  '@terminal3/t3n-sdk@5.10.0(typescript@5.9.3)':
+  '@terminal3/t3n-sdk@4.46.0(typescript@5.9.3)':
     dependencies:
       '@bytecodealliance/preview2-shim': 0.17.9
       '@noble/curves': 2.4.0

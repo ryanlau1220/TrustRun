@@ -2,7 +2,6 @@ import {
   T3nClient,
   createEthAuthInput,
   eth_get_address,
-  fetchTrustedManifest,
   loadWasmComponent,
   metamask_sign,
   setEnvironment,
@@ -15,7 +14,6 @@ setEnvironment("testnet");
 const wasmComponent = await loadWasmComponent();
 const address = eth_get_address(apiKey);
 const t3n = new T3nClient({
-  trustAnchor: await fetchTrustedManifest("testnet"),
   wasmComponent,
   handlers: { EthSign: metamask_sign(address, undefined, apiKey) },
 });
