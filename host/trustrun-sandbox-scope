@@ -17,7 +17,7 @@ if [ "${1:-}" = "--codex-demo" ]; then
   [ "$#" = 1 ] || { echo "Codex demo accepts no arguments" >&2; exit 2; }
   mode=codex-demo
   codex_bin=/usr/local/lib/trustrun-runtime/codex
-  [ -f "$codex_bin" ] && [ -x "$codex_bin" ] && [ "$(stat -c %U "$codex_bin")" = root ] && [ ! -w "$codex_bin" ] || { echo "run pnpm host:install to install the trusted Codex CLI" >&2; exit 1; }
+  [ -f "$codex_bin" ] && [ -x "$codex_bin" ] && [ "$(stat -c %U "$codex_bin")" = root ] && [ "$(stat -c %a "$codex_bin")" = 755 ] || { echo "run pnpm host:install to install the trusted Codex CLI" >&2; exit 1; }
   model_socket="$(dirname "$socket")/model.sock"
   [ -r /etc/trustrun/openai.env ] || { echo "TrustRun OpenAI gateway is not configured" >&2; exit 1; }
 fi
