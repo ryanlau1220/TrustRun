@@ -10,19 +10,27 @@ key=/var/lib/trustrun-executor/executor.key
 state=/var/lib/trustrun-executor/state.db
 bearer=$(openssl rand -base64 48)
 
+sudo -v
+
 if [ ! -f "$cert" ] || [ ! -f "$key" ]; then
-  sudo -u trustrun-executor openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -keyout "$key" -out "$cert" >/dev/null 2>&1
+  sudo -n -u trustrun-executor openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -keyout "$key" -out "$cert" >/dev/null 2>&1
 fi
 
-setsid sudo -u trustrun-executor env \
+setsid sudo -n -u trustrun-executor env \
   TRUSTRUN_EXECUTOR_BEARER="$bearer" \
   TRUSTRUN_EXECUTOR_TLS_CERT="$cert" \
   TRUSTRUN_EXECUTOR_TLS_KEY="$key" \
   TRUSTRUN_EXECUTOR_STATE="$state" \
   "$node_bin" "$root/executor/server.mjs" >"$runtime/executor.log" 2>&1 < /dev/null &
 
-sleep 1
-code=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' --request POST https://127.0.0.1:8443/v1/service/status)
+code=
+i=0
+while [ "$i" -lt 5 ]; do
+  code=$(curl --max-time 1 --silent --insecure --output /dev/null --write-out '%{http_code}' --request POST https://127.0.0.1:8443/v1/service/status || true)
+  [ "$code" = 401 ] && break
+  i=$((i + 1))
+  sleep 1
+done
 [ "$code" = 401 ] || { tail -n 20 "$runtime/executor.log" >&2; exit 1; }
 
 setsid cloudflared tunnel --url https://127.0.0.1:8443 --no-tls-verify >"$runtime/tunnel.log" 2>&1 < /dev/null &
