@@ -18,7 +18,11 @@ runtime=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/trustrun-proof.XXXXXX")
 cert=/var/lib/trustrun-executor/executor.crt
 key=/var/lib/trustrun-executor/executor.key
 state=/var/lib/trustrun-executor/state.db
+host_executor=/usr/local/lib/trustrun-executor/server.mjs
 bearer=$(openssl rand -base64 48)
+
+install -d -m 0755 /usr/local/lib/trustrun-executor
+install -o root -g root -m 0644 "$root/executor/server.mjs" "$host_executor"
 
 if [ ! -f "$cert" ] || [ ! -f "$key" ]; then
   sudo -n -u trustrun-executor openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -keyout "$key" -out "$cert" >/dev/null 2>&1
@@ -29,7 +33,7 @@ setsid sudo -n -u trustrun-executor env \
   TRUSTRUN_EXECUTOR_TLS_CERT="$cert" \
   TRUSTRUN_EXECUTOR_TLS_KEY="$key" \
   TRUSTRUN_EXECUTOR_STATE="$state" \
-  "$node_bin" "$root/executor/server.mjs" >"$runtime/executor.log" 2>&1 < /dev/null &
+  "$node_bin" "$host_executor" >"$runtime/executor.log" 2>&1 < /dev/null &
 
 code=
 i=0
