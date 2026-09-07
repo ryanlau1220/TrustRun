@@ -9,16 +9,15 @@ let claimed = false;
 const server = createServer({ allowHalfOpen: false }, async (socket) => {
   if (claimed) return socket.destroy();
   claimed = true;
-  const close = () => {
-    socket.destroy();
-    server.close();
-  };
   try {
     const mcp = createMcpServer();
-    socket.once("close", () => void mcp.close());
+    socket.once("close", () => {
+      claimed = false;
+      void mcp.close();
+    });
     await mcp.connect(new StdioServerTransport(socket, socket));
   } catch {
-    close();
+    socket.destroy();
   }
 });
 server.listen({ path: socketPath, readableAll: false, writableAll: false });
