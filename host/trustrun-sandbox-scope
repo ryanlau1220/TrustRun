@@ -12,12 +12,27 @@ workspace=$(pwd -P)
 [ -f "$node_bin" ] && [ -x "$node_bin" ] || { echo "invalid Node executable" >&2; exit 1; }
 [ "$(stat -c %U "$workspace")" = "$owner" ] || { echo "workspace must be owned by the sandbox owner" >&2; exit 1; }
 
-exec env -i \
+unit="trustrun-sandbox-$$"
+cleanup() {
+  /usr/bin/systemctl stop "$unit" >/dev/null 2>&1 || true
+}
+trap 'cleanup; exit 130' INT TERM HUP
+trap cleanup EXIT
+
+if env -i \
   PATH=/usr/sbin:/usr/bin:/sbin:/bin \
   TRUSTRUN_SESSION_SOCKET="$socket" \
   TRUSTRUN_NODE_BIN="$node_bin" \
-  /usr/bin/systemd-run --quiet --collect --wait --pipe \
+  /usr/bin/systemd-run --quiet --collect --wait --pipe --unit="$unit" \
   --uid="$owner" --gid="$(id -gn "$owner")" --working-directory="$workspace" \
   --setenv="TRUSTRUN_SESSION_SOCKET=$socket" --setenv="TRUSTRUN_NODE_BIN=$node_bin" \
   --property=KillMode=control-group --property=NoNewPrivileges=yes \
   /usr/local/lib/trustrun-runtime/sandbox-run "$@"
+then
+  status=0
+else
+  status=$?
+fi
+trap - EXIT INT TERM HUP
+cleanup
+exit "$status"
