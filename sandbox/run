@@ -11,7 +11,7 @@ shift
 exec systemd-run --user --scope --quiet --collect \
   --property=KillMode=control-group \
   --property=NoNewPrivileges=yes \
-  bwrap --die-with-parent --new-session --unshare-all \
+  bwrap --die-with-parent --new-session --unshare-all --unshare-user --disable-userns --assert-userns-disabled \
   --clearenv --setenv HOME /tmp --setenv PATH /usr/bin:/bin --setenv TRUSTRUN_SESSION_SOCKET /run/trustrun/session.sock \
   --proc /proc --dev /dev --tmpfs /tmp --dir /run/trustrun \
   --ro-bind /usr /usr --ro-bind /lib /lib --ro-bind /lib64 /lib64 --ro-bind /bin /bin \
