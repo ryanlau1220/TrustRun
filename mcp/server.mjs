@@ -1,20 +1,20 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  T3nClient,
-  createEthAuthInput,
-  eth_get_address,
-  fetchTrustedManifest,
-  getContractVersion,
-  getNodeUrl,
-  loadWasmComponent,
-  metamask_sign,
-  setEnvironment,
-} from "@terminal3/t3n-sdk";
 
 const CONTRACT_TAIL = "trustrun-v1";
 
 async function connect() {
+  const {
+    T3nClient,
+    createEthAuthInput,
+    eth_get_address,
+    fetchTrustedManifest,
+    getContractVersion,
+    getNodeUrl,
+    loadWasmComponent,
+    metamask_sign,
+    setEnvironment,
+  } = await import("@terminal3/t3n-sdk");
   const apiKey = process.env.T3N_API_KEY;
   if (!apiKey) throw new Error("T3N_API_KEY is required");
   setEnvironment("testnet");
@@ -36,15 +36,20 @@ function result(value, allowed) {
 }
 
 async function main() {
-  const session = await connect();
+  let sessionPromise;
+  const session = () => {
+    sessionPromise ??= connect();
+    return sessionPromise;
+  };
   const server = new McpServer({ name: "trustrun", version: "0.1.0" });
   const invoke = async (functionName, allowed) => {
     try {
-      return result(await session.t3n.executeAndDecode({
-        script_name: session.scriptName,
-        script_version: session.scriptVersion,
+      const active = await session();
+      return result(await active.t3n.executeAndDecode({
+        script_name: active.scriptName,
+        script_version: active.scriptVersion,
         function_name: functionName,
-        pii_did: session.did,
+        pii_did: active.did,
         input: {},
       }), allowed);
     } catch {
