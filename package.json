@@ -12,6 +12,8 @@
     "mcp": "node mcp/server.mjs",
     "host:install": "sudo host/install-root",
     "sandbox": "host/run-session --",
+    "t3:publish": "node scripts/t3-publish.mjs",
+    "t3:publish:test": "node scripts/t3-publish.test.mjs",
     "t3:preflight": "tsx scripts/t3-preflight.ts"
   },
   "devDependencies": {
