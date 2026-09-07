@@ -6,6 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 
 const SERVICE = "my-api.service";
 const MAX_BODY_BYTES = 64;
+const MAX_CONNECTIONS = 16;
 
 function exactEmptyObject(body) {
   let value;
@@ -119,6 +120,10 @@ export function createExecutor(config) {
     });
     request.on("error", () => response.destroy());
   });
+  server.maxConnections = MAX_CONNECTIONS;
+  server.headersTimeout = 5_000;
+  server.requestTimeout = 10_000;
+  server.keepAliveTimeout = 5_000;
   server.on("close", () => state.close());
   return server;
 }

@@ -17,6 +17,9 @@ state.close();
 
 execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=localhost", "-keyout", join(directory, "key.pem"), "-out", join(directory, "cert.pem")], { stdio: "ignore" });
 const executor = createExecutor({ bearer: "test-bearer", certPath: join(directory, "cert.pem"), keyPath: join(directory, "key.pem"), statePath: join(directory, "executor.db"), restartHelper: "/bin/false", cooldownMs: 1_000 });
+assert.equal(executor.maxConnections, 16);
+assert.equal(executor.headersTimeout, 5_000);
+assert.equal(executor.requestTimeout, 10_000);
 await new Promise((resolve) => executor.listen(0, "127.0.0.1", resolve));
 const port = executor.address().port;
 const call = (path, body, authorization, contentType = "application/json") => new Promise((resolve, reject) => {
