@@ -20,4 +20,4 @@ exec env -i \
   --uid="$owner" --gid="$(id -gn "$owner")" --working-directory="$workspace" \
   --setenv="TRUSTRUN_SESSION_SOCKET=$socket" --setenv="TRUSTRUN_NODE_BIN=$node_bin" \
   --property=KillMode=control-group --property=NoNewPrivileges=yes \
-  /usr/local/lib/trustrun-runtime/sandbox-run -- "$@"
+  /usr/local/lib/trustrun-runtime/sandbox-run "$@"
