@@ -4,7 +4,7 @@ TrustRun is a trusted execution layer for AI agents. It gives an agent fixed, po
 
 ## Status
 
-Design-stage MVP. It is not yet an installable or production-ready security product.
+V1 proof is implemented and live-verified on Terminal 3 testnet. It is not a production-ready security product.
 
 ## V1 proof
 
