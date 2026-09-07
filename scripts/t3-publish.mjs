@@ -14,7 +14,7 @@ import {
 } from "@terminal3/t3n-sdk";
 
 const CONTRACT_TAIL = "trustrun-v1";
-const CONTRACT_VERSION = "0.1.0";
+const CONTRACT_VERSION = "0.1.2";
 const SECRET_MAP = "secrets";
 const SECRET_KEY = "executor_bearer";
 
@@ -22,6 +22,10 @@ export function executorOrigin(value) {
   const url = new URL(value);
   if (url.protocol !== "https:" || !url.hostname || url.username || url.password || url.pathname !== "/" || url.search || url.hash) throw new Error("TRUSTRUN_EXECUTOR_ORIGIN must be a bare HTTPS origin");
   return url.origin;
+}
+
+export function isMapAlreadyExists(error) {
+  return error instanceof Error && /\bmap already exists\b/i.test(error.message);
 }
 
 function required(name) {
@@ -54,7 +58,11 @@ async function main() {
     wasm: await readFile(fileURLToPath(new URL("../contract/target/wasm32-wasip2/release/trustrun_contract.wasm", import.meta.url))),
   });
   const acl = { only: [registration.contract_id] };
-  await tenant.maps.create({ tail: SECRET_MAP, visibility: "private", writers: acl, readers: acl });
+  try {
+    await tenant.maps.create({ tail: SECRET_MAP, visibility: "private", writers: acl, readers: acl });
+  } catch (error) {
+    if (!isMapAlreadyExists(error)) throw error;
+  }
   await tenant.maps.update(SECRET_MAP, { writers: acl, readers: acl });
   await tenant.executeControl("map-entry-set", { map_name: tenant.canonicalName(SECRET_MAP), key: SECRET_KEY, value: bearer });
   await t3n.updateMemberDelegation({
@@ -68,4 +76,10 @@ async function main() {
   console.log("TrustRun contract published and self-granted.");
 }
 
-if (import.meta.main) main();
+if (import.meta.main) {
+  main().catch((error) => {
+    const message = error instanceof Error ? error.message.replace(/\s+/g, " ").slice(0, 240) : "unknown error";
+    console.error(`TrustRun publish failed: ${message}`);
+    process.exitCode = 1;
+  });
+}

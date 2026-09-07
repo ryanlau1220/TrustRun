@@ -48,10 +48,7 @@ fn call(path: &str) -> Result<ExecutorResponse, String> {
     let response = http::call(&http::Request {
         method: http::Verb::Post,
         url: format!("{EXECUTOR_ORIGIN}{path}"),
-        headers: Some(vec![
-            ("authorization".into(), format!("Bearer {}", bearer()?)),
-            ("content-type".into(), "application/json".into()),
-        ]),
+        headers: Some(vec![("authorization".into(), format!("Bearer {}", bearer()?))]),
         payload: Some(b"{}".to_vec()),
     }).map_err(|_| "executor unavailable".to_string())?;
     if response.code != 200 {
