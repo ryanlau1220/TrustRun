@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+[ "$#" = 0 ] || { echo "no arguments allowed" >&2; exit 2; }
+exec /usr/local/lib/trustrun-runtime/install-root

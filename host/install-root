@@ -2,27 +2,51 @@
 set -eu
 
 [ "$(id -u)" = 0 ] || { echo "run as root" >&2; exit 1; }
-source_root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+case "${1:-}" in
+  --bootstrap)
+    [ "$#" = 1 ] || { echo "usage: $0 --bootstrap" >&2; exit 2; }
+    source_root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+    bootstrap=1
+    ;;
+  "")
+    [ -f /etc/trustrun/source-root ] || { echo "run the bootstrap installer first" >&2; exit 1; }
+    source_root=$(cat /etc/trustrun/source-root)
+    bootstrap=0
+    ;;
+  *)
+    echo "usage: $0 [--bootstrap]" >&2
+    exit 2
+    ;;
+esac
+case "$source_root" in /*) ;; *) echo "invalid source root" >&2; exit 1;; esac
+[ -d "$source_root/.git" ] || { echo "source root must be a Git checkout" >&2; exit 1; }
+[ -z "$(/usr/bin/git -c safe.directory="$source_root" -C "$source_root" status --porcelain --untracked-files=all)" ] || { echo "refusing to install from a dirty source tree" >&2; exit 1; }
 owner=${SUDO_USER:?run through pnpm host:install}
 id "$owner" >/dev/null 2>&1 || { echo "invalid sandbox owner" >&2; exit 1; }
 if ! id trustrun-executor >/dev/null 2>&1; then
   useradd --system --home-dir /nonexistent --shell /usr/sbin/nologin trustrun-executor
 fi
-[ ! -e /etc/systemd/system/my-api.service ] || cmp -s "$(dirname "$0")/my-api.service" /etc/systemd/system/my-api.service || { echo "refusing to replace existing my-api.service" >&2; exit 1; }
+[ ! -e /etc/systemd/system/my-api.service ] || cmp -s "$source_root/host/my-api.service" /etc/systemd/system/my-api.service || { echo "refusing to replace existing my-api.service" >&2; exit 1; }
 
 install -d -m 0755 /usr/local/libexec /usr/local/lib/trustrun-executor /usr/local/lib/trustrun-runtime /etc/sudoers.d /etc/trustrun /var/lib/trustrun-executor
+if [ "$bootstrap" = 1 ]; then
+  install -o root -g root -m 0755 "$source_root/host/install-root" /usr/local/lib/trustrun-runtime/install-root
+  install -o root -g root -m 0755 "$source_root/host/trustrun-install" /usr/local/libexec/trustrun-install
+  printf '%s\n' "$source_root" >/etc/trustrun/source-root
+  chmod 0644 /etc/trustrun/source-root
+fi
 install -o root -g root -m 0644 "$source_root/executor/server.mjs" /usr/local/lib/trustrun-executor/server.mjs
 install -o root -g root -m 0644 "$source_root/mcp/server.mjs" /usr/local/lib/trustrun-runtime/mcp-server.mjs
-install -o root -g root -m 0644 "$(dirname "$0")/session-proxy.mjs" /usr/local/lib/trustrun-runtime/session-proxy.mjs
-install -o root -g root -m 0755 "$(dirname "$0")/run-session" /usr/local/lib/trustrun-runtime/run-session
+install -o root -g root -m 0644 "$source_root/host/session-proxy.mjs" /usr/local/lib/trustrun-runtime/session-proxy.mjs
+install -o root -g root -m 0755 "$source_root/host/run-session" /usr/local/lib/trustrun-runtime/run-session
 install -o root -g root -m 0755 "$source_root/sandbox/run" /usr/local/lib/trustrun-runtime/sandbox-run
-install -o root -g root -m 0755 "$(dirname "$0")/trustrun-sandbox-scope" /usr/local/libexec/trustrun-sandbox-scope
+install -o root -g root -m 0755 "$source_root/host/trustrun-sandbox-scope" /usr/local/libexec/trustrun-sandbox-scope
 install -d -o root -g root -m 0755 /usr/local/lib/trustrun-runtime/node_modules
 cp -aT "$source_root/node_modules" /usr/local/lib/trustrun-runtime/node_modules
 chown -R root:root /usr/local/lib/trustrun-runtime/node_modules
 chmod -R go-w /usr/local/lib/trustrun-runtime/node_modules
-install -o root -g root -m 0750 "$(dirname "$0")/trustrun-restart-my-api" /usr/local/libexec/trustrun-restart-my-api
-install -o root -g root -m 0644 "$(dirname "$0")/my-api.service" /etc/systemd/system/my-api.service
+install -o root -g root -m 0750 "$source_root/host/trustrun-restart-my-api" /usr/local/libexec/trustrun-restart-my-api
+install -o root -g root -m 0644 "$source_root/host/my-api.service" /etc/systemd/system/my-api.service
 printf 'Defaults!/usr/local/libexec/trustrun-sandbox-scope env_keep += "TRUSTRUN_SESSION_SOCKET TRUSTRUN_NODE_BIN"\ntrustrun-executor ALL=(root) NOPASSWD: /usr/local/libexec/trustrun-restart-my-api\n%s ALL=(root) NOPASSWD: /usr/local/libexec/trustrun-sandbox-scope\n' "$owner" >/etc/sudoers.d/trustrun-executor
 chmod 0440 /etc/sudoers.d/trustrun-executor
 visudo -cf /etc/sudoers.d/trustrun-executor

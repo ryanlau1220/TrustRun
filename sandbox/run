@@ -15,5 +15,5 @@ exec bwrap --die-with-parent --new-session --unshare-all --unshare-user --disabl
   --clearenv --setenv HOME /tmp --setenv PATH "$node_dir:/usr/bin:/bin" --setenv TRUSTRUN_SESSION_SOCKET /run/trustrun/session.sock \
   --proc /proc --dev /dev --tmpfs /tmp --dir /run/trustrun \
   --ro-bind /usr/bin /usr/bin --ro-bind /usr/lib /usr/lib --ro-bind-try /usr/share /usr/share --ro-bind /lib /lib --ro-bind /lib64 /lib64 --ro-bind /bin /bin \
-  --ro-bind /etc/ssl/certs /etc/ssl/certs --dir "$(dirname "$node_prefix")" --ro-bind "$node_prefix" "$node_prefix" --bind "$workspace" /workspace --ro-bind-try "$workspace/node_modules" /workspace/node_modules --bind "$socket" /run/trustrun/session.sock \
+  --ro-bind /etc/ssl/certs /etc/ssl/certs --dir "$(dirname "$node_prefix")" --ro-bind "$node_prefix" "$node_prefix" --bind "$workspace" /workspace --tmpfs /workspace/.git --ro-bind-try "$workspace/node_modules" /workspace/node_modules --bind "$socket" /run/trustrun/session.sock \
   --chdir /workspace -- "$@"
