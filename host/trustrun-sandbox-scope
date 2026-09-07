@@ -35,7 +35,7 @@ if [ "$mode" = codex-demo ]; then
   . /etc/trustrun/openai.env
   set +a
   umask 077
-  /usr/sbin/runuser -u "$owner" -- env -i PATH=/usr/bin:/bin OPENAI_API_KEY="$OPENAI_API_KEY" TRUSTRUN_MODEL_SOCKET="$model_socket" /usr/bin/node /usr/local/lib/trustrun-runtime/model-gateway.mjs &
+  /usr/sbin/runuser -u "$owner" -- env -i PATH=/usr/bin:/bin OPENAI_API_KEY="$OPENAI_API_KEY" TRUSTRUN_MODEL_SOCKET="$model_socket" "$node_bin" /usr/local/lib/trustrun-runtime/model-gateway.mjs &
   gateway=$!
   while [ ! -S "$model_socket" ]; do sleep 0.05; done
   [ "$(stat -c %U "$model_socket")" = "$owner" ] || { echo "invalid model gateway socket" >&2; exit 1; }
