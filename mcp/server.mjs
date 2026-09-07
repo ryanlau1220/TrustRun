@@ -30,15 +30,15 @@ async function connect() {
   return { t3n, scriptName, scriptVersion: await getContractVersion(getNodeUrl(), scriptName), did: did.value };
 }
 
-function result(value) {
-  if (!value || value.ok !== true || value.service !== "my-api" || typeof value.status !== "string") throw new Error("invalid contract response");
+function result(value, allowed) {
+  if (!value || value.ok !== true || value.service !== "my-api" || !allowed.includes(value.status)) throw new Error("invalid contract response");
   return { content: [{ type: "text", text: JSON.stringify({ ok: true, service: "my-api", status: value.status }) }] };
 }
 
 async function main() {
   const session = await connect();
   const server = new McpServer({ name: "trustrun", version: "0.1.0" });
-  const invoke = async (functionName) => {
+  const invoke = async (functionName, allowed) => {
     try {
       return result(await session.t3n.executeAndDecode({
         script_name: session.scriptName,
@@ -46,13 +46,13 @@ async function main() {
         function_name: functionName,
         pii_did: session.did,
         input: {},
-      }));
+      }), allowed);
     } catch {
       return { content: [{ type: "text", text: JSON.stringify({ ok: false, code: "unavailable" }) }], isError: true };
     }
   };
-  server.registerTool("service.status", { description: "Return the sanitized status of my-api.service.", inputSchema: {} }, () => invoke("service-status"));
-  server.registerTool("service.restart", { description: "Request a restart of my-api.service.", inputSchema: {} }, () => invoke("service-restart"));
+  server.registerTool("service.status", { description: "Return the sanitized status of my-api.service.", inputSchema: {} }, () => invoke("service-status", ["running", "not_running"]));
+  server.registerTool("service.restart", { description: "Request a restart of my-api.service.", inputSchema: {} }, () => invoke("service-restart", ["restart_requested"]));
   await server.connect(new StdioServerTransport());
 }
 
