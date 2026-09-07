@@ -19,6 +19,13 @@ key=/var/lib/trustrun-executor/executor.key
 state=/var/lib/trustrun-executor/state.db
 host_executor=/usr/local/lib/trustrun-executor/server.mjs
 bearer=$(openssl rand -base64 48)
+executor_pid=
+tunnel_pid=
+cleanup() {
+  [ -z "$tunnel_pid" ] || kill -- "-$tunnel_pid" 2>/dev/null || true
+  [ -z "$executor_pid" ] || kill -- "-$executor_pid" 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM HUP
 
 [ "$(stat -c '%U:%a' "$host_executor")" = root:644 ] || { echo "run pnpm host:install first" >&2; exit 1; }
 
@@ -32,6 +39,7 @@ setsid sudo -n -u trustrun-executor env \
   TRUSTRUN_EXECUTOR_TLS_KEY="$key" \
   TRUSTRUN_EXECUTOR_STATE="$state" \
   "$node_bin" "$host_executor" >"$runtime/executor.log" 2>&1 < /dev/null &
+executor_pid=$!
 
 code=
 i=0
@@ -44,6 +52,7 @@ done
 [ "$code" = 401 ] || { tail -n 20 "$runtime/executor.log" >&2; exit 1; }
 
 setsid cloudflared tunnel --url https://127.0.0.1:8443 --no-tls-verify >"$runtime/tunnel.log" 2>&1 < /dev/null &
+tunnel_pid=$!
 i=0
 url=
 while [ "$i" -lt 30 ]; do
@@ -60,4 +69,5 @@ sudo -n -u "$owner" env \
   TRUSTRUN_EXECUTOR_ORIGIN="$url" \
   TRUSTRUN_EXECUTOR_BEARER="$bearer" \
   pnpm t3:publish
+trap - EXIT INT TERM HUP
 printf 'TrustRun test origin: %s\n' "$url"
