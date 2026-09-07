@@ -7,6 +7,7 @@ import { DatabaseSync } from "node:sqlite";
 const SERVICE = "my-api.service";
 const MAX_BODY_BYTES = 64;
 const MAX_CONNECTIONS = 16;
+export const RESTART_COOLDOWN_MS = 600_000;
 
 function exactEmptyObject(body) {
   let value;
@@ -140,7 +141,7 @@ if (import.meta.main) {
     keyPath: required("TRUSTRUN_EXECUTOR_TLS_KEY"),
     statePath: required("TRUSTRUN_EXECUTOR_STATE"),
     restartHelper: "/usr/local/libexec/trustrun-restart-my-api",
-    cooldownMs: 60_000,
+    cooldownMs: RESTART_COOLDOWN_MS,
   });
   server.listen(8443, "0.0.0.0");
 }

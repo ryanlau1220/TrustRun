@@ -4,7 +4,9 @@ import { mkdtempSync } from "node:fs";
 import { request } from "node:https";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createExecutor, RestartState } from "./server.mjs";
+import { createExecutor, RESTART_COOLDOWN_MS, RestartState } from "./server.mjs";
+
+assert.equal(RESTART_COOLDOWN_MS, 600_000);
 
 const directory = mkdtempSync(join(tmpdir(), "trustrun-"));
 const state = new RestartState(join(directory, "state.db"), 1_000);
