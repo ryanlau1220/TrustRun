@@ -10,7 +10,7 @@ key=/var/lib/trustrun-executor/executor.key
 state=/var/lib/trustrun-executor/state.db
 bearer=$(openssl rand -base64 48)
 
-sudo -v
+sudo /usr/bin/true
 
 if [ ! -f "$cert" ] || [ ! -f "$key" ]; then
   sudo -n -u trustrun-executor openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -keyout "$key" -out "$cert" >/dev/null 2>&1
