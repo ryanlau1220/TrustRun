@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { resolve } from "node:path";
 
 const CONTRACT_TAIL = "trustrun-v1";
 
@@ -35,7 +36,7 @@ function result(value, allowed) {
   return { content: [{ type: "text", text: JSON.stringify({ ok: true, service: "my-api", status: value.status }) }] };
 }
 
-async function main() {
+export function createMcpServer() {
   let sessionPromise;
   const session = () => {
     sessionPromise ??= connect();
@@ -58,7 +59,11 @@ async function main() {
   };
   server.registerTool("service.status", { description: "Return the sanitized status of my-api.service.", inputSchema: {} }, () => invoke("service-status", ["running", "not_running"]));
   server.registerTool("service.restart", { description: "Request a restart of my-api.service.", inputSchema: {} }, () => invoke("service-restart", ["restart_requested"]));
-  await server.connect(new StdioServerTransport());
+  return server;
 }
 
-main().catch(() => process.exit(1));
+async function main() {
+  await createMcpServer().connect(new StdioServerTransport());
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) main().catch(() => process.exit(1));

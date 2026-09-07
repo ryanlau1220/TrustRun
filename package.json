@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "executor:test": "node executor/test.mjs",
+    "mcp:test": "node mcp/server.test.mjs",
     "model-gateway:test": "node host/model-gateway.test.mjs",
     "contract:build": "cd contract && cargo build --target wasm32-wasip2 --release",
     "mcp": "node mcp/server.mjs",
