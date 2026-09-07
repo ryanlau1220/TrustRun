@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/bin/systemctl restart my-api.service
