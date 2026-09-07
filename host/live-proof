@@ -4,7 +4,6 @@ set -eu
 : "${T3N_API_KEY:?T3N_API_KEY is required}"
 [ "$(id -u)" = 0 ] || { echo "run through pnpm host:live-proof" >&2; exit 1; }
 owner=${SUDO_USER:?SUDO_USER is required}
-root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 node_bin=
 for directory in $(printf %s "$PATH" | tr : ' '); do
   candidate=$directory/node
@@ -21,8 +20,7 @@ state=/var/lib/trustrun-executor/state.db
 host_executor=/usr/local/lib/trustrun-executor/server.mjs
 bearer=$(openssl rand -base64 48)
 
-install -d -m 0755 /usr/local/lib/trustrun-executor
-install -o root -g root -m 0644 "$root/executor/server.mjs" "$host_executor"
+[ "$(stat -c '%U:%a' "$host_executor")" = root:644 ] || { echo "run pnpm host:install first" >&2; exit 1; }
 
 if [ ! -f "$cert" ] || [ ! -f "$key" ]; then
   sudo -n -u trustrun-executor openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -keyout "$key" -out "$cert" >/dev/null 2>&1

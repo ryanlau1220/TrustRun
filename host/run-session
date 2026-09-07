@@ -2,8 +2,13 @@
 set -eu
 
 runtime=${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is required}/trustrun
+trusted_runtime=/usr/local/lib/trustrun-runtime
 mkdir -p -m 700 "$runtime"
 : "${T3N_API_KEY:?T3N_API_KEY is required}"
+[ -x "$trusted_runtime/run-session" ] || { echo "run pnpm host:install first" >&2; exit 1; }
+if [ "${TRUSTRUN_INSTALLED_SESSION:-}" != 1 ]; then
+  TRUSTRUN_INSTALLED_SESSION=1 exec "$trusted_runtime/run-session" "$@"
+fi
 session_dir=$(mktemp -d "$runtime/session.XXXXXX")
 socket=$session_dir/session.sock
 cleanup() {
@@ -14,4 +19,4 @@ TRUSTRUN_SESSION_SOCKET=$socket node "$(dirname "$0")/session-proxy.mjs" &
 proxy=$!
 trap cleanup EXIT INT TERM
 while [ ! -S "$socket" ]; do sleep 0.05; done
-TRUSTRUN_SESSION_SOCKET=$socket "$(dirname "$0")/../sandbox/run" "$@"
+TRUSTRUN_SESSION_SOCKET=$socket "$(dirname "$0")/sandbox-run" "$@"

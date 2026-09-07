@@ -1,12 +1,11 @@
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
+import { fileURLToPath } from "node:url";
 
 const socketPath = process.env.TRUSTRUN_SESSION_SOCKET;
 if (!socketPath) throw new Error("TRUSTRUN_SESSION_SOCKET is required");
 
-const mcpSource = readFileSync(new URL("../mcp/server.mjs", import.meta.url), "utf8");
-const child = spawn(process.execPath, ["--input-type=module", "--eval", mcpSource], {
+const child = spawn(process.execPath, [fileURLToPath(new URL("./mcp-server.mjs", import.meta.url))], {
   cwd: process.cwd(),
   env: { PATH: process.env.PATH, T3N_API_KEY: process.env.T3N_API_KEY },
   stdio: ["pipe", "pipe", "ignore"],

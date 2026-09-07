@@ -2,13 +2,22 @@
 set -eu
 
 [ "$(id -u)" = 0 ] || { echo "run as root" >&2; exit 1; }
+source_root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 if ! id trustrun-executor >/dev/null 2>&1; then
   useradd --system --home-dir /nonexistent --shell /usr/sbin/nologin trustrun-executor
 fi
-[ ! -e /etc/systemd/system/my-api.service ] || { echo "refusing to replace existing my-api.service" >&2; exit 1; }
+[ ! -e /etc/systemd/system/my-api.service ] || cmp -s "$(dirname "$0")/my-api.service" /etc/systemd/system/my-api.service || { echo "refusing to replace existing my-api.service" >&2; exit 1; }
 
-install -d -m 0755 /usr/local/libexec /usr/local/lib/trustrun-executor /etc/sudoers.d /var/lib/trustrun-executor
-install -o root -g root -m 0644 "$(dirname "$0")/../executor/server.mjs" /usr/local/lib/trustrun-executor/server.mjs
+install -d -m 0755 /usr/local/libexec /usr/local/lib/trustrun-executor /usr/local/lib/trustrun-runtime /etc/sudoers.d /var/lib/trustrun-executor
+install -o root -g root -m 0644 "$source_root/executor/server.mjs" /usr/local/lib/trustrun-executor/server.mjs
+install -o root -g root -m 0644 "$source_root/mcp/server.mjs" /usr/local/lib/trustrun-runtime/mcp-server.mjs
+install -o root -g root -m 0644 "$(dirname "$0")/session-proxy.mjs" /usr/local/lib/trustrun-runtime/session-proxy.mjs
+install -o root -g root -m 0755 "$(dirname "$0")/run-session" /usr/local/lib/trustrun-runtime/run-session
+install -o root -g root -m 0755 "$source_root/sandbox/run" /usr/local/lib/trustrun-runtime/sandbox-run
+install -d -o root -g root -m 0755 /usr/local/lib/trustrun-runtime/node_modules
+cp -aT "$source_root/node_modules" /usr/local/lib/trustrun-runtime/node_modules
+chown -R root:root /usr/local/lib/trustrun-runtime/node_modules
+chmod -R go-w /usr/local/lib/trustrun-runtime/node_modules
 install -o root -g root -m 0750 "$(dirname "$0")/trustrun-restart-my-api" /usr/local/libexec/trustrun-restart-my-api
 install -o root -g root -m 0644 "$(dirname "$0")/my-api.service" /etc/systemd/system/my-api.service
 printf 'trustrun-executor ALL=(root) NOPASSWD: /usr/local/libexec/trustrun-restart-my-api\n' >/etc/sudoers.d/trustrun-executor
