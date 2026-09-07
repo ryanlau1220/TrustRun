@@ -2,6 +2,8 @@
 set -eu
 
 : "${T3N_API_KEY:?T3N_API_KEY is required}"
+[ "$(id -u)" = 0 ] || { echo "run through pnpm host:live-proof" >&2; exit 1; }
+owner=${SUDO_USER:?SUDO_USER is required}
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 node_bin=$(command -v node)
 runtime=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/trustrun-proof.XXXXXX")
@@ -9,8 +11,6 @@ cert=/var/lib/trustrun-executor/executor.crt
 key=/var/lib/trustrun-executor/executor.key
 state=/var/lib/trustrun-executor/state.db
 bearer=$(openssl rand -base64 48)
-
-sudo /usr/bin/true
 
 if [ ! -f "$cert" ] || [ ! -f "$key" ]; then
   sudo -n -u trustrun-executor openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -keyout "$key" -out "$cert" >/dev/null 2>&1
@@ -44,5 +44,10 @@ while [ "$i" -lt 30 ]; do
 done
 [ -n "$url" ] || { tail -n 20 "$runtime/tunnel.log" >&2; exit 1; }
 
-TRUSTRUN_EXECUTOR_ORIGIN="$url" TRUSTRUN_EXECUTOR_BEARER="$bearer" pnpm t3:publish
+sudo -n -u "$owner" env \
+  PATH="$PATH" \
+  T3N_API_KEY="$T3N_API_KEY" \
+  TRUSTRUN_EXECUTOR_ORIGIN="$url" \
+  TRUSTRUN_EXECUTOR_BEARER="$bearer" \
+  pnpm t3:publish
 printf 'TrustRun test origin: %s\n' "$url"

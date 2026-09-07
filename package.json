@@ -11,7 +11,7 @@
     "contract:build": "cd contract && cargo build --target wasm32-wasip2 --release",
     "mcp": "node mcp/server.mjs",
     "host:install": "sudo host/install-root",
-    "host:live-proof": "host/live-proof",
+    "host:live-proof": "sudo env T3N_API_KEY=\"$T3N_API_KEY\" PATH=\"$PATH\" host/live-proof",
     "sandbox": "host/run-session --",
     "t3:publish": "node scripts/t3-publish.mjs",
     "t3:publish:test": "node scripts/t3-publish.test.mjs",
