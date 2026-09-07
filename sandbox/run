@@ -15,5 +15,5 @@ exec systemd-run --user --scope --quiet --collect \
   --clearenv --setenv HOME /tmp --setenv PATH /usr/bin:/bin --setenv TRUSTRUN_SESSION_SOCKET /run/trustrun/session.sock \
   --proc /proc --dev /dev --tmpfs /tmp --dir /run/trustrun \
   --ro-bind /usr /usr --ro-bind /lib /lib --ro-bind /lib64 /lib64 --ro-bind /bin /bin \
-  --ro-bind /etc/ssl/certs /etc/ssl/certs --bind "$workspace" /workspace --bind "$socket" /run/trustrun/session.sock \
+  --ro-bind /etc/ssl/certs /etc/ssl/certs --bind "$workspace" /workspace --ro-bind-try "$workspace/node_modules" /workspace/node_modules --bind "$socket" /run/trustrun/session.sock \
   --chdir /workspace -- "$@"
