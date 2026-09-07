@@ -19,6 +19,6 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@terminal3/t3n-sdk": "^4.2.0"
+    "@terminal3/t3n-sdk": "5.2.0"
   }
 }
