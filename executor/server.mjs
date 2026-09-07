@@ -85,6 +85,7 @@ export function createExecutor(config) {
   const server = createServer({ cert: readFileSync(config.certPath), key: readFileSync(config.keyPath), minVersion: "TLSv1.3" }, (request, response) => {
     if (!bearerMatches(request.headers.authorization, config.bearer)) return send(response, 401, { ok: false, code: "unauthorized" });
     if (request.method !== "POST" || (request.url !== "/v1/service/status" && request.url !== "/v1/service/restart")) return send(response, 404, { ok: false, code: "not_found" });
+    if (request.headers["content-type"] !== "application/json") return send(response, 400, { ok: false, code: "invalid_request" });
     if (Number(request.headers["content-length"] ?? 0) > MAX_BODY_BYTES) return send(response, 400, { ok: false, code: "invalid_request" });
 
     let body = "";

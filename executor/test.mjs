@@ -19,8 +19,8 @@ execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days
 const executor = createExecutor({ bearer: "test-bearer", certPath: join(directory, "cert.pem"), keyPath: join(directory, "key.pem"), statePath: join(directory, "executor.db"), restartHelper: "/bin/false", cooldownMs: 1_000 });
 await new Promise((resolve) => executor.listen(0, "127.0.0.1", resolve));
 const port = executor.address().port;
-const call = (path, body, authorization) => new Promise((resolve, reject) => {
-  const req = request({ hostname: "127.0.0.1", port, path, method: "POST", rejectUnauthorized: false, headers: { "content-type": "application/json", "content-length": Buffer.byteLength(body), ...(authorization ? { authorization } : {}) } }, (res) => {
+const call = (path, body, authorization, contentType = "application/json") => new Promise((resolve, reject) => {
+  const req = request({ hostname: "127.0.0.1", port, path, method: "POST", rejectUnauthorized: false, headers: { "content-type": contentType, "content-length": Buffer.byteLength(body), ...(authorization ? { authorization } : {}) } }, (res) => {
     let data = "";
     res.setEncoding("utf8");
     res.on("data", (chunk) => { data += chunk; });
@@ -30,5 +30,6 @@ const call = (path, body, authorization) => new Promise((resolve, reject) => {
   req.end(body);
 });
 assert.deepEqual(await call("/v1/service/status", "{}"), { status: 401, body: { ok: false, code: "unauthorized" } });
+assert.deepEqual(await call("/v1/service/status", "{}", "Bearer test-bearer", "text/plain"), { status: 400, body: { ok: false, code: "invalid_request" } });
 assert.deepEqual(await call("/v1/service/status", '{"service":"other"}', "Bearer test-bearer"), { status: 400, body: { ok: false, code: "invalid_request" } });
 await new Promise((resolve) => executor.close(resolve));
