@@ -1,0 +1,11 @@
+[Unit]
+Description=TrustRun v1 test service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/sleep infinity
+Restart=always
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

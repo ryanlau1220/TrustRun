@@ -10,6 +10,7 @@
     "executor:test": "node executor/test.mjs",
     "contract:build": "cd contract && cargo build --target wasm32-wasip2 --release",
     "mcp": "node mcp/server.mjs",
+    "host:install": "sudo host/install-root",
     "sandbox": "host/run-session --",
     "t3:preflight": "tsx scripts/t3-preflight.ts"
   },
