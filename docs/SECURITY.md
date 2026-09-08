@@ -32,8 +32,8 @@ The **privileged management plane**:
 | **Model Bridge** | Untrusted | Runs inside sandbox, relays HTTP to `/run/trustrun/model.sock`. |
 | **Host Session Proxy** | Trusted | Enforces single-session socket claim; bridges to host MCP server. |
 | **Host Model Gateway** | Trusted | Holds `GONKA_API_KEY`; validates request size; proxies to GonkaRouter. |
-| **Host MCP Server** | Trusted | Uses `@terminal3/t3n-sdk` to invoke T3 TEE contract. |
-| **Terminal 3 TEE** | Trusted | Smart contract in hardware enclave; validates inputs; holds executor bearer; enforces egress whitelist. |
+| **Host MCP Server** | Trusted | Runs on trusted host; uses `T3N_API_KEY` to authenticate to Terminal 3 and invoke T3 TEE contract. |
+| **Terminal 3 TEE** | Trusted | Smart contract in TEE enclave; validates inputs; holds executor bearer; enforces egress allowlist. |
 | **HTTPS Executor** | Trusted | Verifies bearer; enforces SQLite WAL cooldown; executes fixed root helper. |
 | **Privileged Helper** | Trusted | `/usr/local/libexec/trustrun-restart-my-api` takes zero arguments. |
 
@@ -46,16 +46,18 @@ An MCP (Model Context Protocol) server running in the same environment as an age
 2. **Client-Side Schema Bypass:** An agent with code execution can bypass the MCP protocol entirely and make direct network requests, craft arbitrary payloads, or invoke system utilities if network or sockets are accessible.
 3. **No Hardware Guarantees:** A local software policy engine can be disabled or altered if permissions are misconfigured.
 
-**TrustRun's defense:** The MCP server is split. The sandbox only sees a stdio-to-socket bridge. The credentials never enter the host MCP server either; they reside inside the Terminal 3 TEE.
+**TrustRun's defense:** The MCP server is split. The sandbox only sees a stdio-to-socket bridge. The sandbox holds zero credentials:
+* `T3N_API_KEY` exists only on the trusted host runtime environment.
+* The executor bearer token stays inside Terminal 3 private storage and the host executor configuration, never entering the sandbox or the MCP protocol.
 
 ---
 
 ## 4. Why Terminal 3 (T3) Is Security-Critical
 
-Terminal 3 provides hardware-anchored TEE guarantees:
+Terminal 3 provides Terminal 3 TEE-backed execution guarantees:
 1. **Isolated Secret Store:** The executor bearer token is stored in T3's private KV map (`z:<tenant_hash>:secrets`), accessible only to the enclave running the verified contract hash.
 2. **Immutable Logic:** The contract is compiled to WASM (`wasm32-wasip2`) and verified on-chain. Neither the agent nor the host runtime can modify the contract's fixed destination or parameter rules.
-3. **Hardware Egress Allowlisting:** The enclave runtime restricts outbound HTTPS connections strictly to the registered executor hostname. Even if an attacker could invoke the contract, they cannot redirect the request or leak the token to an external server.
+3. **Enclave Egress Allowlisting:** The enclave runtime restricts outbound HTTPS connections strictly to the registered executor hostname. Even if an attacker could invoke the contract, they cannot redirect the request or leak the token to an external server.
 4. **Input Sanitization:** The contract strictly validates that input is empty (`{}`) and formats the outbound request itself.
 
 ---
@@ -69,9 +71,12 @@ Terminal 3 provides hardware-anchored TEE guarantees:
 
 ---
 
-## 6. Next Hardening Step: T3 Runtime Identity Delegation
+## 6. Identity Model & Next Hardening Steps
 
-In v1, the contract uses tenant self-delegation (`grantee: tenant_did`) on testnet.  
+### Current v1 Identity Model: Tenant Self-Delegation
+For demo stability, TrustRun v1 uses tenant self-delegation (`grantee: tenant_did`) on Terminal 3 testnet. The host runtime holds `T3N_API_KEY` to invoke the contract on behalf of the session.
+
+### Next Hardening Step: Dedicated Runtime DID Delegation
 The designated next security hardening phase is **sub-identity delegation**:
 1. Host runtime generates an ephemeral or dedicated runtime keypair (`runtime_did`).
 2. The root tenant DID issues an on-chain delegation to `runtime_did` limited strictly to:
@@ -80,3 +85,6 @@ The designated next security hardening phase is **sub-identity delegation**:
    * Allowed Hosts: `[<executor_hostname>]`
    * Expiration time bounded to the deployment cycle.
 3. `T3N_API_KEY` of the tenant is completely removed from the runtime host, leaving only the delegated runtime key.
+
+### Future Hardening: Active/Previous Bearer Token Rotation
+TrustRun v1 uses a single high-entropy executor bearer token shared between Terminal 3 private KV storage and the executor configuration. A future hardening milestone will introduce dual-bearer rollover (accepting both active and previous tokens during a grace window) to allow zero-downtime key rotation without interrupting active workloads.
