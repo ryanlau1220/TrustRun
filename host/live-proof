@@ -13,33 +13,47 @@ for directory in $(printf %s "$PATH" | tr : ' '); do
   fi
 done
 [ -n "$node_bin" ] || { echo "no Node executable is available to trustrun-executor" >&2; exit 1; }
-runtime=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/trustrun-proof.XXXXXX")
 cert=/var/lib/trustrun-executor/executor.crt
 key=/var/lib/trustrun-executor/executor.key
 state=/var/lib/trustrun-executor/state.db
+proof_state=/var/lib/trustrun-executor/live-proof.env
 host_executor=/usr/local/lib/trustrun-executor/server.mjs
-bearer=$(openssl rand -base64 48)
-executor_pid=
-tunnel_pid=
+executor_unit=trustrun-proof-executor.service
+tunnel_unit=trustrun-proof-tunnel.service
 cleanup() {
-  [ -z "$tunnel_pid" ] || kill -- "-$tunnel_pid" 2>/dev/null || true
-  [ -z "$executor_pid" ] || kill -- "-$executor_pid" 2>/dev/null || true
+  systemctl stop "$tunnel_unit" "$executor_unit" 2>/dev/null || true
+  rm -f "$proof_state"
 }
 trap cleanup EXIT INT TERM HUP
 
 [ "$(stat -c '%U:%a' "$host_executor")" = root:644 ] || { echo "run pnpm host:install first" >&2; exit 1; }
 
+if [ -f "$proof_state" ]; then
+  [ "$(stat -c '%U:%a' "$proof_state")" = root:600 ] || { echo "invalid live proof state" >&2; exit 1; }
+  . "$proof_state"
+  case "$TRUSTRUN_EXECUTOR_ORIGIN" in https://*.trycloudflare.com) ;; *) echo "invalid live proof origin" >&2; exit 1;; esac
+  [ "${#TRUSTRUN_EXECUTOR_BEARER}" -ge 32 ] || { echo "invalid live proof credential" >&2; exit 1; }
+  systemctl is-active --quiet "$executor_unit" && systemctl is-active --quiet "$tunnel_unit" || { echo "live proof endpoint is no longer active; publish a higher contract version before creating a replacement" >&2; exit 1; }
+  trap - EXIT INT TERM HUP
+  exec sudo -n -u "$owner" env PATH="$PATH" T3N_API_KEY="$T3N_API_KEY" TRUSTRUN_EXECUTOR_ORIGIN="$TRUSTRUN_EXECUTOR_ORIGIN" TRUSTRUN_EXECUTOR_BEARER="$TRUSTRUN_EXECUTOR_BEARER" pnpm t3:live-proof
+fi
+
+if systemctl is-active --quiet "$executor_unit" || systemctl is-active --quiet "$tunnel_unit"; then
+  echo "stale live proof units without state" >&2
+  exit 1
+fi
+
 if [ ! -f "$cert" ] || [ ! -f "$key" ]; then
   sudo -n -u trustrun-executor openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -keyout "$key" -out "$cert" >/dev/null 2>&1
 fi
 
-setsid sudo -n -u trustrun-executor env \
-  TRUSTRUN_EXECUTOR_BEARER="$bearer" \
-  TRUSTRUN_EXECUTOR_TLS_CERT="$cert" \
-  TRUSTRUN_EXECUTOR_TLS_KEY="$key" \
-  TRUSTRUN_EXECUTOR_STATE="$state" \
-  "$node_bin" "$host_executor" >"$runtime/executor.log" 2>&1 < /dev/null &
-executor_pid=$!
+bearer=$(openssl rand -base64 48)
+systemd-run --quiet --collect --unit=trustrun-proof-executor --uid=trustrun-executor --gid=trustrun-executor \
+  --setenv=TRUSTRUN_EXECUTOR_BEARER="$bearer" \
+  --setenv=TRUSTRUN_EXECUTOR_TLS_CERT="$cert" \
+  --setenv=TRUSTRUN_EXECUTOR_TLS_KEY="$key" \
+  --setenv=TRUSTRUN_EXECUTOR_STATE="$state" \
+  "$node_bin" "$host_executor"
 
 code=
 i=0
@@ -49,19 +63,18 @@ while [ "$i" -lt 5 ]; do
   i=$((i + 1))
   sleep 1
 done
-[ "$code" = 401 ] || { tail -n 20 "$runtime/executor.log" >&2; exit 1; }
+[ "$code" = 401 ] || { journalctl --no-pager -u "$executor_unit" -n 20 >&2; exit 1; }
 
-setsid cloudflared tunnel --url https://127.0.0.1:8443 --no-tls-verify >"$runtime/tunnel.log" 2>&1 < /dev/null &
-tunnel_pid=$!
+systemd-run --quiet --collect --unit=trustrun-proof-tunnel --uid=trustrun-executor --gid=trustrun-executor cloudflared tunnel --url https://127.0.0.1:8443 --no-tls-verify
 i=0
 url=
 while [ "$i" -lt 30 ]; do
-  url=$(rg -o 'https://[a-z0-9-]+\.trycloudflare\.com' "$runtime/tunnel.log" | head -n 1 || true)
+  url=$(journalctl --no-pager -u "$tunnel_unit" -n 100 -o cat | rg -o 'https://[a-z0-9-]+\.trycloudflare\.com' | head -n 1 || true)
   [ -n "$url" ] && break
   i=$((i + 1))
   sleep 1
 done
-[ -n "$url" ] || { tail -n 20 "$runtime/tunnel.log" >&2; exit 1; }
+[ -n "$url" ] || { journalctl --no-pager -u "$tunnel_unit" -n 20 >&2; exit 1; }
 
 sudo -n -u "$owner" env \
   PATH="$PATH" \
@@ -69,5 +82,12 @@ sudo -n -u "$owner" env \
   TRUSTRUN_EXECUTOR_ORIGIN="$url" \
   TRUSTRUN_EXECUTOR_BEARER="$bearer" \
   pnpm t3:publish
+umask 077
+printf 'TRUSTRUN_EXECUTOR_ORIGIN=%s\nTRUSTRUN_EXECUTOR_BEARER=%s\n' "$url" "$bearer" >"$proof_state"
 trap - EXIT INT TERM HUP
-printf 'TrustRun test origin: %s\n' "$url"
+exec sudo -n -u "$owner" env \
+  PATH="$PATH" \
+  T3N_API_KEY="$T3N_API_KEY" \
+  TRUSTRUN_EXECUTOR_ORIGIN="$url" \
+  TRUSTRUN_EXECUTOR_BEARER="$bearer" \
+  pnpm t3:live-proof
