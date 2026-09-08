@@ -22,6 +22,7 @@
     "sandbox:proof": "/usr/local/lib/trustrun-runtime/run-session -- node scripts/verify-sandbox-runtime.mjs",
     "codex:demo": "/usr/local/lib/trustrun-runtime/run-codex-demo",
     "demo": "node demo/server.mjs",
+    "demo:reset": "sudo python3 -c 'import sqlite3; conn = sqlite3.connect(\"/var/lib/trustrun-executor/state.db\"); conn.execute(\"UPDATE restart_state SET cooldown_until_ms=0, in_flight=0\"); conn.commit(); print(\"Cooldown reset: READY\")'",
     "t3:publish": "node scripts/t3-publish.mjs",
     "t3:publish:test": "node scripts/t3-publish.test.mjs",
     "t3:live-proof": "node scripts/t3-live-proof.mjs",
