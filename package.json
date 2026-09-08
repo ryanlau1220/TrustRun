@@ -7,6 +7,8 @@
   "packageManager": "pnpm@10.32.1",
   "type": "module",
   "scripts": {
+    "test": "node executor/test.mjs && node mcp/server.test.mjs && node host/codex-config.test.mjs && node host/session-proxy.test.mjs && node host/model-gateway.test.mjs && node scripts/t3-publish.test.mjs && node scripts/verify-demo-boundaries.mjs",
+    "test:boundaries": "node scripts/verify-demo-boundaries.mjs",
     "executor:test": "node executor/test.mjs",
     "mcp:test": "node mcp/server.test.mjs",
     "codex-config:test": "node host/codex-config.test.mjs",
