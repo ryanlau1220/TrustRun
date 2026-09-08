@@ -14,7 +14,7 @@ import {
 } from "@terminal3/t3n-sdk";
 
 const CONTRACT_TAIL = "trustrun-v1";
-const CONTRACT_VERSION = "0.1.5";
+const CONTRACT_VERSION = "0.1.6";
 const SECRET_MAP = "secrets";
 const SECRET_KEY = "executor_bearer";
 

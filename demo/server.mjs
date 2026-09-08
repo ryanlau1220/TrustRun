@@ -65,7 +65,7 @@ createServer(async (request, response) => {
       cooldown: readCooldown(),
       contract: {
         tail: "trustrun-v1",
-        version: "0.1.5",
+        version: "0.1.6",
         environment: "Terminal 3 Testnet",
         address: "0x85ceb62f87bfcb3b5ba83a653913797399e204d3",
         service: "my-api.service",
