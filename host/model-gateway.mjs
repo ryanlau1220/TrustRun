@@ -1,3 +1,4 @@
+import { Resolver } from "node:dns/promises";
 import { unlink } from "node:fs/promises";
 import { createServer } from "node:http";
 import { request as httpsRequest } from "node:https";
@@ -166,12 +167,31 @@ function chatRequest(body) {
 	};
 }
 
+const fallbackResolver = new Resolver();
+fallbackResolver.setServers(["1.1.1.1", "8.8.8.8", "1.0.0.1"]);
+
+function robustLookup(hostname, options, callback) {
+	const cb = typeof options === "function" ? options : callback;
+	const isAll = typeof options === "object" && options?.all;
+	fallbackResolver
+		.resolve4(hostname)
+		.then((addresses) => {
+			if (isAll) {
+				cb(null, addresses.map((addr) => ({ address: addr, family: 4 })));
+			} else {
+				cb(null, addresses[0], 4);
+			}
+		})
+		.catch((err) => cb(err));
+}
+
 function forwardToGonka(body, apiKey) {
 	return httpsRequest({
 		hostname: "api.gonkarouter.io",
 		port: 443,
 		method: "POST",
 		path: "/v1/chat/completions",
+		lookup: robustLookup,
 		rejectUnauthorized: true,
 		headers: {
 			authorization: `Bearer ${apiKey}`,
