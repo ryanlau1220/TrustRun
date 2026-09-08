@@ -34,6 +34,16 @@ const response = await new Promise((resolve, reject) => {
   })}\n`));
 });
 assert.equal(response.result?.serverInfo?.name, "trustrun");
+const tools = await new Promise((resolve, reject) => {
+  const timer = setTimeout(() => reject(new Error("MCP tools/list timed out")), 3000);
+  client.once("data", (data) => {
+    clearTimeout(timer);
+    resolve(JSON.parse(data).result?.tools?.map((tool) => tool.name).sort());
+  });
+  client.once("error", reject);
+  client.write(`${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} })}\n`);
+});
+assert.deepEqual(tools, ["service.restart", "service.status"]);
 client.end();
 await new Promise((resolve) => proxy.close(resolve));
 await rm(directory, { recursive: true, force: true });
