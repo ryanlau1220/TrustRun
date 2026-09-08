@@ -1,4 +1,4 @@
-package trustrun:contract@0.1.3;
+package trustrun:contract@0.1.4;
 
 world trustrun {
     import host:tenant/tenant-context@1.0.0;

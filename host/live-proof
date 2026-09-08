@@ -4,6 +4,7 @@ set -eu
 : "${T3N_API_KEY:?T3N_API_KEY is required}"
 [ "$(id -u)" = 0 ] || { echo "run through pnpm host:live-proof" >&2; exit 1; }
 owner=${SUDO_USER:?SUDO_USER is required}
+requested_origin=${TRUSTRUN_EXECUTOR_ORIGIN:?TRUSTRUN_EXECUTOR_ORIGIN is required}
 node_bin=
 for directory in $(printf %s "$PATH" | tr : ' '); do
   candidate=$directory/node
@@ -19,26 +20,36 @@ state=/var/lib/trustrun-executor/state.db
 proof_state=/var/lib/trustrun-executor/live-proof.env
 host_executor=/usr/local/lib/trustrun-executor/server.mjs
 executor_unit=trustrun-proof-executor.service
-tunnel_unit=trustrun-proof-tunnel.service
 cleanup() {
-  systemctl stop "$tunnel_unit" "$executor_unit" 2>/dev/null || true
+  systemctl stop "$executor_unit" 2>/dev/null || true
   rm -f "$proof_state"
 }
 trap cleanup EXIT INT TERM HUP
 
 [ "$(stat -c '%U:%a' "$host_executor")" = root:644 ] || { echo "run pnpm host:install first" >&2; exit 1; }
+origin=$("$node_bin" -e '
+const value = process.argv[1];
+try {
+  const url = new URL(value);
+  if (url.protocol !== "https:" || !url.hostname || url.username || url.password || url.pathname !== "/" || url.search || url.hash) throw new Error();
+  process.stdout.write(url.origin);
+} catch { process.exit(1); }
+' "$requested_origin") || { echo "TRUSTRUN_EXECUTOR_ORIGIN must be a bare HTTPS origin" >&2; exit 1; }
 
 if [ -f "$proof_state" ]; then
   [ "$(stat -c '%U:%a' "$proof_state")" = root:600 ] || { echo "invalid live proof state" >&2; exit 1; }
   . "$proof_state"
-  case "$TRUSTRUN_EXECUTOR_ORIGIN" in https://*.trycloudflare.com) ;; *) echo "invalid live proof origin" >&2; exit 1;; esac
+  [ "$TRUSTRUN_EXECUTOR_ORIGIN" = "$origin" ] || { systemctl stop trustrun-proof-tunnel.service "$executor_unit" 2>/dev/null || true; rm -f "$proof_state"; }
+fi
+
+if [ -f "$proof_state" ]; then
   [ "${#TRUSTRUN_EXECUTOR_BEARER}" -ge 32 ] || { echo "invalid live proof credential" >&2; exit 1; }
-  systemctl is-active --quiet "$executor_unit" && systemctl is-active --quiet "$tunnel_unit" || { echo "live proof endpoint is no longer active; publish a higher contract version before creating a replacement" >&2; exit 1; }
+  systemctl is-active --quiet "$executor_unit" || { echo "live proof executor is no longer active; publish a higher contract version before creating a replacement" >&2; exit 1; }
   trap - EXIT INT TERM HUP
   exec sudo -n -u "$owner" env PATH="$PATH" T3N_API_KEY="$T3N_API_KEY" TRUSTRUN_EXECUTOR_ORIGIN="$TRUSTRUN_EXECUTOR_ORIGIN" TRUSTRUN_EXECUTOR_BEARER="$TRUSTRUN_EXECUTOR_BEARER" pnpm t3:live-proof
 fi
 
-if systemctl is-active --quiet "$executor_unit" || systemctl is-active --quiet "$tunnel_unit"; then
+if systemctl is-active --quiet "$executor_unit"; then
   echo "stale live proof units without state" >&2
   exit 1
 fi
@@ -65,29 +76,21 @@ while [ "$i" -lt 5 ]; do
 done
 [ "$code" = 401 ] || { journalctl --no-pager -u "$executor_unit" -n 20 >&2; exit 1; }
 
-systemd-run --quiet --collect --unit=trustrun-proof-tunnel --uid=trustrun-executor --gid=trustrun-executor cloudflared tunnel --url https://127.0.0.1:8443 --no-tls-verify
-i=0
-url=
-while [ "$i" -lt 30 ]; do
-  url=$(journalctl --no-pager -u "$tunnel_unit" -n 100 -o cat | rg -o 'https://[a-z0-9-]+\.trycloudflare\.com' | head -n 1 || true)
-  [ -n "$url" ] && break
-  i=$((i + 1))
-  sleep 1
-done
-[ -n "$url" ] || { journalctl --no-pager -u "$tunnel_unit" -n 20 >&2; exit 1; }
+code=$(curl --max-time 5 --silent --output /dev/null --write-out '%{http_code}' --request POST "$origin/v1/service/status" || true)
+[ "$code" = 401 ] || { echo "stable executor origin did not return 401" >&2; exit 1; }
 
 sudo -n -u "$owner" env \
   PATH="$PATH" \
   T3N_API_KEY="$T3N_API_KEY" \
-  TRUSTRUN_EXECUTOR_ORIGIN="$url" \
+  TRUSTRUN_EXECUTOR_ORIGIN="$origin" \
   TRUSTRUN_EXECUTOR_BEARER="$bearer" \
   pnpm t3:publish
 umask 077
-printf 'TRUSTRUN_EXECUTOR_ORIGIN=%s\nTRUSTRUN_EXECUTOR_BEARER=%s\n' "$url" "$bearer" >"$proof_state"
+printf 'TRUSTRUN_EXECUTOR_ORIGIN=%s\nTRUSTRUN_EXECUTOR_BEARER=%s\n' "$origin" "$bearer" >"$proof_state"
 trap - EXIT INT TERM HUP
 exec sudo -n -u "$owner" env \
   PATH="$PATH" \
   T3N_API_KEY="$T3N_API_KEY" \
-  TRUSTRUN_EXECUTOR_ORIGIN="$url" \
+  TRUSTRUN_EXECUTOR_ORIGIN="$origin" \
   TRUSTRUN_EXECUTOR_BEARER="$bearer" \
   pnpm t3:live-proof
