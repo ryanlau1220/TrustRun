@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "TrustRun Dual-Gateway Architecture",
+    "subtitle": "Capabilities, Not Credentials: Hardware-Anchored Delegation for AI Agents",
+    "quality_profile": "standard",
+    "visual_preset": "signal-flow",
+    "views": [
+      {
+        "id": "capability-flow",
+        "label": "Privileged capability path",
+        "focus": ["codex", "mcp", "t3", "executor", "service"],
+        "note": "Privileged service recovery routed through Terminal 3 TEE enclave to HTTPS executor."
+      },
+      {
+        "id": "inference-flow",
+        "label": "Credential-isolated inference",
+        "focus": ["codex", "model_gw", "deepseek"],
+        "note": "Codex accesses DeepSeek through host gateway without possessing GONKA_API_KEY."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "codex",
+      "type": "external",
+      "label": "Codex Agent",
+      "sublabel": "bwrap sandbox",
+      "tag": "Zero Credentials",
+      "pos": [40, 240],
+      "size": [140, 64]
+    },
+    {
+      "id": "model_gw",
+      "type": "backend",
+      "label": "Gonka Gateway",
+      "sublabel": "model.sock bridge",
+      "tag": "Holds GONKA_API_KEY",
+      "pos": [280, 100],
+      "size": [150, 64]
+    },
+    {
+      "id": "deepseek",
+      "type": "cloud",
+      "label": "GonkaRouter",
+      "sublabel": "DeepSeek-V4",
+      "tag": "Upstream Inference",
+      "pos": [570, 100],
+      "size": [150, 64]
+    },
+    {
+      "id": "mcp",
+      "type": "backend",
+      "label": "TrustRun MCP",
+      "sublabel": "session.sock bridge",
+      "tag": "Holds T3N_API_KEY",
+      "pos": [280, 300],
+      "size": [150, 64]
+    },
+    {
+      "id": "t3",
+      "type": "security",
+      "label": "Terminal 3 TEE",
+      "sublabel": "trustrun-v1 (Rust WASM)",
+      "tag": "Private KV Bearer Store",
+      "pos": [580, 300],
+      "size": [170, 64]
+    },
+    {
+      "id": "executor",
+      "type": "backend",
+      "label": "HTTPS Executor",
+      "sublabel": "TLSv1.3 Endpoint",
+      "tag": "10m Cooldown · WAL",
+      "pos": [960, 300],
+      "size": [150, 64]
+    },
+    {
+      "id": "service",
+      "type": "backend",
+      "label": "my-api.service",
+      "sublabel": "systemd unit",
+      "tag": "Root-Owned Helper",
+      "pos": [1260, 300],
+      "size": [140, 64]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Untrusted Sandbox (--unshare-all)",
+      "wraps": ["codex"]
+    },
+    {
+      "kind": "region",
+      "label": "Trusted Host: Model Gateway",
+      "wraps": ["model_gw"]
+    },
+    {
+      "kind": "region",
+      "label": "External Inference",
+      "wraps": ["deepseek"]
+    },
+    {
+      "kind": "region",
+      "label": "Trusted Host: Capability Gateway",
+      "wraps": ["mcp"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Terminal 3 Testnet (Hardware Enclave)",
+      "wraps": ["t3"]
+    },
+    {
+      "kind": "region",
+      "label": "Trusted Host: Privileged Executor",
+      "wraps": ["executor", "service"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "codex-to-model-gw",
+      "from": "codex",
+      "to": "model_gw",
+      "label": "model.sock",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "model-gw-to-deepseek",
+      "from": "model_gw",
+      "to": "deepseek",
+      "label": "HTTPS",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "codex-to-mcp",
+      "from": "codex",
+      "to": "mcp",
+      "label": "session.sock",
+      "labelDy": 24,
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "mcp-to-t3",
+      "from": "mcp",
+      "to": "t3",
+      "label": "T3 SDK",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "t3-to-executor",
+      "from": "t3",
+      "to": "executor",
+      "label": "HTTPS + Bearer",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "executor-to-service",
+      "from": "executor",
+      "to": "service",
+      "label": "root helper (0 args)",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Untrusted Sandbox",
+      "items": [
+        "Codex CLI runs with bwrap --clearenv and --unshare-all",
+        "GONKA_API_KEY, T3N_API_KEY, and executor bearer are absent",
+        "Direct network connection to executor port 8443 is blocked"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Hardware Capability Boundary",
+      "items": [
+        "MCP exposes only service.status and service.restart",
+        "Terminal 3 TEE verifies caller identity and injects bearer token",
+        "TEE egress allowlist strictly confines traffic to executor endpoint"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Durable Rate Limiting & Target Isolation",
+      "items": [
+        "Executor enforces single-flight state and 10-minute cooldown in SQLite",
+        "Parameterless root-owned helper restarts exclusively my-api.service",
+        "Sanitized schemas return only { ok: true, status: ... }"
+      ]
+    }
+  ]
+}
