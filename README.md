@@ -69,7 +69,7 @@ TrustRun cleanly separates inference traffic from capability execution while kee
 
 ### 2. Capability Gateway (TrustRun MCP + Terminal 3)
 * **Agent interface:** Model Context Protocol (MCP) server over `/run/trustrun/session.sock`, exposing only `service.status` and `service.restart`.
-* **Hardware-enforced authority:** Invocations pass through a Terminal 3 (T3) TEE smart contract compiled to `wasm32-wasip2`. The contract validates that inputs are empty JSON objects `{}` and fetches the executor bearer token from private T3 tenant storage.
+* **Terminal 3 TEE-backed execution:** Invocations pass through a Terminal 3 (T3) TEE smart contract compiled to `wasm32-wasip2`. The contract validates that inputs are empty JSON objects `{}` and fetches the executor bearer token from private T3 tenant storage.
 * **Egress allowlisting:** T3 restricts outbound HTTP calls strictly to the registered executor hostname.
 * **Privileged executor:** The executor runs under an unprivileged user (`trustrun-executor`), enforces a durable 10-minute cooldown and single-flight execution using SQLite in WAL mode, and triggers a parameterless, root-owned restart helper (`/usr/local/libexec/trustrun-restart-my-api`).
 * **Sanitized outputs:** Only `{ ok: true, service: "my-api", status: "running" | "not_running" | "restart_requested" }` is returned to the agent. No stdout, stderr, logs, or system paths ever cross the boundary.
