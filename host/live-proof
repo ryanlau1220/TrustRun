@@ -76,7 +76,14 @@ while [ "$i" -lt 5 ]; do
 done
 [ "$code" = 401 ] || { journalctl --no-pager -u "$executor_unit" -n 20 >&2; exit 1; }
 
-code=$(curl --max-time 5 --silent --output /dev/null --write-out '%{http_code}' --request POST "$origin/v1/service/status" || true)
+code=
+i=0
+while [ "$i" -lt 60 ]; do
+  code=$(curl --max-time 5 --silent --output /dev/null --write-out '%{http_code}' --request POST "$origin/v1/service/status" || true)
+  [ "$code" = 401 ] && break
+  i=$((i + 1))
+  sleep 1
+done
 [ "$code" = 401 ] || { echo "stable executor origin did not return 401" >&2; exit 1; }
 
 sudo -n -u "$owner" env \
