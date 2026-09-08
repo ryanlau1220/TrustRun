@@ -4,8 +4,7 @@
 
 TrustRun is a safe execution environment and capability gateway for AI agents. Rather than providing an autonomous agent with unrestricted SSH keys, root passwords, cloud credentials, or Docker sockets, TrustRun isolates the agent in a tightly constrained sandbox and mediates privileged operations through a cryptographically anchored capability path.
 
-[![TrustRun Demo Video](https://img.youtube.com/vi/ta6eqoni8Lc/maxresdefault.jpg)](https://youtu.be/ta6eqoni8Lc)  
-*📺 **Watch the live proof demonstration on YouTube:** [https://youtu.be/ta6eqoni8Lc](https://youtu.be/ta6eqoni8Lc)*
+📺 **Demo Video:** [https://youtu.be/ta6eqoni8Lc](https://youtu.be/ta6eqoni8Lc)
 
 ---
 
