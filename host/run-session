@@ -12,11 +12,16 @@ if [ "${TRUSTRUN_INSTALLED_SESSION:-}" != 1 ]; then
 fi
 session_dir=$(mktemp -d "$runtime/session.XXXXXX")
 socket=$session_dir/session.sock
+trace=$runtime/demo-event.json
+if [ "${1:-}" = "--codex-demo" ]; then
+  umask 077
+  : >"$trace"
+fi
 cleanup() {
   kill "$proxy" 2>/dev/null || true
   rm -rf "$session_dir"
 }
-TRUSTRUN_SESSION_SOCKET=$socket node "$(dirname "$0")/session-proxy.mjs" &
+TRUSTRUN_DEMO_TRACE=$trace TRUSTRUN_SESSION_SOCKET=$socket node "$(dirname "$0")/session-proxy.mjs" &
 proxy=$!
 trap cleanup EXIT HUP INT TERM
 while [ ! -S "$socket" ]; do sleep 0.05; done

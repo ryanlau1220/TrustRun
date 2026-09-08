@@ -1,13 +1,22 @@
 import assert from "node:assert/strict";
 import { createConnection, createServer } from "node:net";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createMcpServer } from "./server.mjs";
+import { createMcpServer, recordDemoEvent } from "./server.mjs";
 
 const directory = await mkdtemp(join(tmpdir(), "trustrun-mcp-"));
 const path = join(directory, "session.sock");
+const trace = join(directory, "demo-event.json");
+const originalTrace = process.env.TRUSTRUN_DEMO_TRACE;
+process.env.TRUSTRUN_DEMO_TRACE = trace;
+await recordDemoEvent("service.status", { ok: true, service: "my-api", status: "running" });
+const recorded = JSON.parse(await readFile(trace, "utf8"));
+assert.equal(typeof recorded.at, "number");
+assert.deepEqual({ capability: recorded.capability, result: recorded.result }, { capability: "service.status", result: { ok: true, service: "my-api", status: "running" } });
+if (originalTrace === undefined) delete process.env.TRUSTRUN_DEMO_TRACE;
+else process.env.TRUSTRUN_DEMO_TRACE = originalTrace;
 let mcp;
 const proxy = createServer(async (socket) => {
   mcp = createMcpServer();

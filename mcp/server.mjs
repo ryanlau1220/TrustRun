@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const CONTRACT_TAIL = "trustrun-v1";
@@ -33,7 +34,19 @@ async function connect() {
 
 function result(value, allowed) {
   if (!value || value.ok !== true || value.service !== "my-api" || !allowed.includes(value.status)) throw new Error("invalid contract response");
-  return { content: [{ type: "text", text: JSON.stringify({ ok: true, service: "my-api", status: value.status }) }] };
+  return { ok: true, service: "my-api", status: value.status };
+}
+
+export async function recordDemoEvent(capability, value) {
+  const path = process.env.TRUSTRUN_DEMO_TRACE;
+  if (!path) return;
+  if (!(["service.status", "service.restart"].includes(capability))) return;
+  if (!value || typeof value !== "object" || value.ok !== true || value.service !== "my-api" || typeof value.status !== "string") return;
+  await writeFile(path, `${JSON.stringify({ at: Date.now(), capability, result: value })}\n`, { mode: 0o600 }).catch(() => {});
+}
+
+function response(value, error = false) {
+  return { content: [{ type: "text", text: JSON.stringify(value) }], ...(error && { isError: true }) };
 }
 
 export function createMcpServer() {
@@ -43,10 +56,11 @@ export function createMcpServer() {
     return sessionPromise;
   };
   const server = new McpServer({ name: "trustrun", version: "0.1.0" });
-  const invoke = async (functionName, allowed) => {
+  const invoke = async (capability, functionName, allowed) => {
+    let value;
     try {
       const active = await session();
-      return result(await active.t3n.executeAndDecode({
+      value = result(await active.t3n.executeAndDecode({
         script_name: active.scriptName,
         script_version: active.scriptVersion,
         function_name: functionName,
@@ -54,11 +68,13 @@ export function createMcpServer() {
         input: {},
       }), allowed);
     } catch {
-      return { content: [{ type: "text", text: JSON.stringify({ ok: false, code: "unavailable" }) }], isError: true };
+      return response({ ok: false, code: "unavailable" }, true);
     }
+    await recordDemoEvent(capability, value);
+    return response(value);
   };
-  server.registerTool("service.status", { description: "Return the sanitized status of my-api.service.", inputSchema: {} }, () => invoke("service-status", ["running", "not_running"]));
-  server.registerTool("service.restart", { description: "Request a restart of my-api.service.", inputSchema: {} }, () => invoke("service-restart", ["restart_requested"]));
+  server.registerTool("service.status", { description: "Return the sanitized status of my-api.service.", inputSchema: {} }, () => invoke("service.status", "service-status", ["running", "not_running"]));
+  server.registerTool("service.restart", { description: "Request a restart of my-api.service.", inputSchema: {} }, () => invoke("service.restart", "service-restart", ["restart_requested"]));
   return server;
 }
 
