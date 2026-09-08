@@ -19,7 +19,7 @@ This document records the exact, verified technical evidence collected from runn
 * **Contract Tail:** `trustrun-v1`
 * **Contract Canonical Identifier:** `z:<tenant_hash>:trustrun-v1`
 * **Contract Compilation Target:** `wasm32-wasip2` via Rust `wit-bindgen` and `cargo build --release`
-* **Verified Contract Version:** `0.1.5`
+* **Verified Contract Version:** `0.1.6` (and `0.1.5`)
 * **Registered Functions:**
   * `service-status`
   * `service-restart`
