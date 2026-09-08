@@ -5,46 +5,491 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TrustRun — Capabilities, not credentials</title>
     <style>
-      :root { color-scheme: dark; --ink:#07110e; --paper:#e9e5d8; --acid:#c7ff5e; --mint:#79e6b1; --warning:#ff785a; --fog:#9ca8a2; --line:rgba(233,229,216,.2); }
-      * { box-sizing:border-box; } body { margin:0; min-width:320px; color:var(--paper); background:radial-gradient(circle at 78% -10%,#1c4936 0,transparent 31rem),linear-gradient(135deg,#07110e,#101a15 62%,#08110e); font-family:"Avenir Next Condensed","Helvetica Neue",sans-serif; letter-spacing:.015em; }
-      body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.24; background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px); background-size:48px 48px; mask-image:linear-gradient(to bottom,black,transparent 90%); }
-      main { position:relative; max-width:1440px; margin:auto; padding:26px clamp(18px,4vw,64px) 40px; }
-      .eyebrow,.label { font:600 11px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--mint); }
-      header { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; padding:0 0 34px; border-bottom:1px solid var(--line); } h1 { margin:8px 0 0; max-width:850px; font-family:"Iowan Old Style","Palatino Linotype",serif; font-size:clamp(43px,7vw,94px); line-height:.86; letter-spacing:-.06em; font-weight:400; } h1 em { font-style:normal; color:var(--acid); } .read-only { display:flex; align-items:center; gap:8px; margin-top:4px; padding:9px 11px; border:1px solid rgba(199,255,94,.45); color:var(--acid); font:600 11px ui-monospace,SFMono-Regular,monospace; white-space:nowrap; } .dot { width:8px; height:8px; border-radius:99px; background:var(--acid); box-shadow:0 0 14px var(--acid); }
-      .lede { max-width:700px; margin:26px 0 34px; color:#d4d8cd; font:400 clamp(17px,2vw,23px)/1.35 "Iowan Old Style","Palatino Linotype",serif; }
-      .board { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(330px,1.35fr) minmax(250px,.9fr); border:1px solid var(--line); background:rgba(2,10,7,.56); backdrop-filter:blur(12px); }
-      .panel { min-height:455px; padding:23px; border-right:1px solid var(--line); } .panel:last-child { border:0; } .panel h2 { margin:10px 0 25px; font-size:22px; font-weight:500; letter-spacing:-.025em; }
-      .rule { padding:14px 0; border-top:1px solid var(--line); } .rule span { display:block; margin-top:6px; color:var(--fog); font:13px/1.35 ui-monospace,SFMono-Regular,monospace; } .forbidden { color:var(--warning)!important; } .allowed { color:var(--acid)!important; }
-      .flow { display:grid; gap:0; margin-top:28px; } .node { position:relative; display:grid; grid-template-columns:31px 1fr auto; align-items:center; min-height:62px; padding:12px 0; border-top:1px solid var(--line); color:#adb9b2; transition:color .35s,background .35s; } .node::after { content:""; position:absolute; left:15px; top:50px; bottom:-13px; border-left:1px dashed var(--line); } .node:last-child::after { display:none; } .node b { font-size:15px; font-weight:600; color:inherit; } .node small { color:var(--fog); font:10px ui-monospace,SFMono-Regular,monospace; text-transform:uppercase; } .node .number { color:var(--mint); font:12px ui-monospace,SFMono-Regular,monospace; } .node.live { margin:0 -10px; padding-left:10px; padding-right:10px; color:var(--paper); background:linear-gradient(90deg,rgba(199,255,94,.15),transparent); } .node.live b { color:var(--acid); } .node.live .number { color:var(--acid); text-shadow:0 0 18px var(--acid); }
-      .service-card { padding:20px; border:1px solid var(--line); background:#0b1712; } .service-card .state { display:block; margin:10px 0 4px; color:var(--acid); font:600 clamp(31px,4vw,49px)/1 ui-monospace,SFMono-Regular,monospace; letter-spacing:-.08em; } .service-card.down .state { color:var(--warning); } .service-card p { margin:0; color:var(--fog); font-size:13px; } .event { min-height:142px; margin-top:22px; padding:18px; border-left:3px solid var(--mint); background:rgba(121,230,177,.07); } .event.empty { border-color:var(--line); background:transparent; } .event strong { display:block; margin:7px 0; color:var(--paper); font:600 14px ui-monospace,SFMono-Regular,monospace; } .event code { color:var(--acid); font:12px ui-monospace,SFMono-Regular,monospace; word-break:break-word; }
-      .runbook { display:grid; grid-template-columns:1fr 1fr 1fr; margin-top:18px; border:1px solid var(--line); } .step { padding:19px 22px; border-right:1px solid var(--line); } .step:last-child { border:0; } .step p { margin:8px 0 0; color:#b9c3bc; font-size:14px; line-height:1.35; } .step code { display:block; margin-top:12px; color:var(--acid); font:12px/1.45 ui-monospace,SFMono-Regular,monospace; white-space:normal; }
-      footer { display:flex; justify-content:space-between; gap:18px; margin-top:20px; color:var(--fog); font:12px/1.4 ui-monospace,SFMono-Regular,monospace; } footer strong { color:var(--paper); font-weight:500; }
-      @media (max-width:900px) { .board { grid-template-columns:1fr; } .panel { min-height:auto; border-right:0; border-bottom:1px solid var(--line); } .runbook { grid-template-columns:1fr; } .step { border-right:0; border-bottom:1px solid var(--line); } header { display:block; } .read-only { display:inline-flex; margin-top:20px; } }
-      @media (prefers-reduced-motion:reduce) { * { transition:none!important; } }
+      :root {
+        color-scheme: dark;
+        --ink: #07110e;
+        --paper: #e9e5d8;
+        --acid: #c7ff5e;
+        --mint: #79e6b1;
+        --warning: #ff785a;
+        --fog: #9ca8a2;
+        --line: rgba(233, 229, 216, 0.18);
+        --panel-bg: rgba(7, 17, 14, 0.72);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        color: var(--paper);
+        background: radial-gradient(circle at 80% -10%, #1c4936 0, transparent 32rem),
+                    linear-gradient(135deg, #07110e, #101a15 65%, #08110e);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        letter-spacing: 0.01em;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.2;
+        background-image: linear-gradient(var(--line) 1px, transparent 1px),
+                          linear-gradient(90deg, var(--line) 1px, transparent 1px);
+        background-size: 40px 40px;
+        mask-image: linear-gradient(to bottom, black, transparent 92%);
+      }
+      main {
+        position: relative;
+        max-width: 1440px;
+        margin: auto;
+        padding: 24px clamp(16px, 4vw, 56px) 40px;
+      }
+      .eyebrow, .label {
+        font: 600 11px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--mint);
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+        padding: 0 0 28px;
+        border-bottom: 1px solid var(--line);
+      }
+      h1 {
+        margin: 8px 0 0;
+        max-width: 850px;
+        font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+        font-size: clamp(38px, 6vw, 76px);
+        line-height: 0.92;
+        letter-spacing: -0.05em;
+        font-weight: 400;
+      }
+      h1 em {
+        font-style: normal;
+        color: var(--acid);
+      }
+      .header-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+      }
+      .read-only {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border: 1px solid rgba(199, 255, 94, 0.4);
+        background: rgba(199, 255, 94, 0.05);
+        color: var(--acid);
+        font: 600 11px ui-monospace, SFMono-Regular, monospace;
+        letter-spacing: 0.08em;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+        background: var(--acid);
+        box-shadow: 0 0 12px var(--acid);
+      }
+      .contract-pill {
+        display: flex;
+        gap: 12px;
+        font: 11px ui-monospace, monospace;
+        color: var(--fog);
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line);
+      }
+      .contract-pill span strong {
+        color: var(--paper);
+        font-weight: 500;
+      }
+      .lede {
+        max-width: 800px;
+        margin: 20px 0 28px;
+        color: #d6deda;
+        font-size: clamp(16px, 1.8vw, 20px);
+        line-height: 1.4;
+      }
+      .board {
+        display: grid;
+        grid-template-columns: minmax(240px, 0.85fr) minmax(340px, 1.35fr) minmax(280px, 1fr);
+        border: 1px solid var(--line);
+        background: var(--panel-bg);
+        backdrop-filter: blur(16px);
+      }
+      .panel {
+        min-height: 480px;
+        padding: 24px;
+        border-right: 1px solid var(--line);
+      }
+      .panel:last-child {
+        border-right: 0;
+      }
+      .panel h2 {
+        margin: 8px 0 20px;
+        font-size: 20px;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+      }
+      .rule {
+        padding: 11px 0;
+        border-top: 1px solid var(--line);
+      }
+      .rule span {
+        display: block;
+        margin-top: 4px;
+        color: var(--fog);
+        font: 12px/1.3 ui-monospace, SFMono-Regular, monospace;
+      }
+      .forbidden { color: var(--warning) !important; font-weight: 600; }
+      .allowed { color: var(--acid) !important; font-weight: 600; }
+
+      .flow {
+        display: grid;
+        gap: 0;
+        margin-top: 20px;
+      }
+      .node {
+        position: relative;
+        display: grid;
+        grid-template-columns: 32px 1fr auto;
+        align-items: center;
+        min-height: 60px;
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+        color: #aab5af;
+        transition: color 0.3s, background 0.3s;
+      }
+      .node::after {
+        content: "";
+        position: absolute;
+        left: 15px;
+        top: 46px;
+        bottom: -14px;
+        border-left: 1px dashed var(--line);
+      }
+      .node:last-child::after {
+        display: none;
+      }
+      .node b {
+        font-size: 14px;
+        font-weight: 600;
+        color: inherit;
+      }
+      .node small {
+        color: var(--fog);
+        font: 10px ui-monospace, SFMono-Regular, monospace;
+        text-transform: uppercase;
+      }
+      .node .number {
+        color: var(--mint);
+        font: 12px ui-monospace, monospace;
+      }
+      .node.live {
+        margin: 0 -8px;
+        padding-left: 8px;
+        padding-right: 8px;
+        color: var(--paper);
+        background: linear-gradient(90deg, rgba(199, 255, 94, 0.15), transparent);
+      }
+      .node.live b { color: var(--acid); }
+      .node.live .number { color: var(--acid); text-shadow: 0 0 14px var(--acid); }
+
+      .service-card {
+        padding: 18px;
+        border: 1px solid var(--line);
+        background: #091510;
+      }
+      .service-card .state {
+        display: block;
+        margin: 8px 0 4px;
+        color: var(--acid);
+        font: 600 clamp(28px, 3.5vw, 42px)/1 ui-monospace, SFMono-Regular, monospace;
+        letter-spacing: -0.06em;
+      }
+      .service-card.down .state { color: var(--warning); }
+      .service-card p { margin: 0; color: var(--fog); font-size: 13px; }
+
+      .cooldown-card {
+        margin-top: 14px;
+        padding: 14px 18px;
+        border: 1px solid var(--line);
+        background: #091510;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .cooldown-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        font: 600 11px ui-monospace, monospace;
+        border-radius: 2px;
+      }
+      .cooldown-badge.ready {
+        color: var(--acid);
+        background: rgba(199, 255, 94, 0.1);
+        border: 1px solid rgba(199, 255, 94, 0.3);
+      }
+      .cooldown-badge.active {
+        color: var(--warning);
+        background: rgba(255, 120, 90, 0.12);
+        border: 1px solid rgba(255, 120, 90, 0.35);
+      }
+
+      .event {
+        min-height: 140px;
+        margin-top: 16px;
+        padding: 16px;
+        border-left: 3px solid var(--mint);
+        background: rgba(121, 230, 177, 0.06);
+      }
+      .event.empty {
+        border-color: var(--line);
+        background: transparent;
+      }
+      .event strong {
+        display: block;
+        margin: 6px 0;
+        color: var(--paper);
+        font: 600 13px ui-monospace, SFMono-Regular, monospace;
+      }
+      .event code {
+        display: block;
+        color: var(--acid);
+        font: 11px/1.4 ui-monospace, monospace;
+        word-break: break-word;
+      }
+      .event-time {
+        margin-top: 8px;
+        color: var(--fog);
+        font: 10px ui-monospace, monospace;
+      }
+
+      .runbook {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        margin-top: 16px;
+        border: 1px solid var(--line);
+        background: rgba(7, 17, 14, 0.4);
+      }
+      .step {
+        padding: 18px 20px;
+        border-right: 1px solid var(--line);
+      }
+      .step:last-child { border-right: 0; }
+      .step p {
+        margin: 6px 0 0;
+        color: #b0bcb5;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+      .step code {
+        display: block;
+        margin-top: 10px;
+        color: var(--acid);
+        font: 11px/1.4 ui-monospace, monospace;
+        white-space: normal;
+      }
+
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 20px;
+        color: var(--fog);
+        font: 11px/1.4 ui-monospace, SFMono-Regular, monospace;
+      }
+      footer strong { color: var(--paper); font-weight: 500; }
+
+      @media (max-width: 960px) {
+        .board { grid-template-columns: 1fr; }
+        .panel { min-height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+        .runbook { grid-template-columns: 1fr; }
+        .step { border-right: 0; border-bottom: 1px solid var(--line); }
+        header { flex-direction: column; align-items: flex-start; }
+        .header-meta { align-items: flex-start; margin-top: 16px; }
+      }
     </style>
   </head>
   <body>
     <main>
       <header>
-        <div><div class="eyebrow">Terminal 3 ADK · live proof console</div><h1>Capabilities,<br /><em>not credentials.</em></h1></div>
-        <div class="read-only"><i class="dot"></i> READ-ONLY PRESENTER</div>
+        <div>
+          <div class="eyebrow">Terminal 3 ADK · Live Proof Console</div>
+          <h1>Capabilities,<br /><em>not credentials.</em></h1>
+        </div>
+        <div class="header-meta">
+          <div class="read-only"><i class="dot"></i> LIVE PRESENTER</div>
+          <div class="contract-pill" id="contract-info">
+            <span>Contract: <strong>trustrun-v1 (v0.1.5)</strong></span>
+            <span>Network: <strong>T3 Testnet</strong></span>
+          </div>
+        </div>
       </header>
-      <p class="lede">TrustRun lets an untrusted coding agent recover one fixed service without receiving infrastructure or model-provider credentials.</p>
+
+      <p class="lede">TrustRun demonstrates an untrusted AI agent managing a fixed Linux service through an isolated capability path without holding infrastructure or model API credentials.</p>
+
       <section class="board" aria-label="TrustRun live proof">
-        <article class="panel"><div class="label">01 / untrusted agent</div><h2>Codex sandbox</h2><div class="rule"><b>Workspace</b><span>writeable · untrusted</span></div><div class="rule"><b>Management network</b><span class="forbidden">not reachable</span></div><div class="rule"><b>OpenAI / Gonka credential</b><span class="forbidden">not present</span></div><div class="rule"><b>Terminal 3 credential</b><span class="forbidden">not present</span></div><div class="rule"><b>Only authority</b><span class="allowed">service.status · service.restart</span></div></article>
-        <article class="panel"><div class="label">02 / protected action path</div><h2>What actually executes</h2><div class="flow"><div class="node" data-node="agent"><i class="number">01</i><b>Codex agent</b><small>prompt</small></div><div class="node" data-node="mcp"><i class="number">02</i><b>TrustRun MCP</b><small>fixed tools</small></div><div class="node" data-node="t3"><i class="number">03</i><b>Terminal 3 TEE</b><small>identity + grant</small></div><div class="node" data-node="executor"><i class="number">04</i><b>HTTPS executor</b><small>fixed schema</small></div><div class="node" data-node="service"><i class="number">05</i><b>my-api.service</b><small>one target</small></div></div></article>
-        <article class="panel"><div class="label">03 / live state</div><h2>Evidence, not a mock</h2><div class="service-card" id="service-card"><span class="label">my-api.service</span><strong class="state" id="service-state">CHECKING</strong><p id="service-copy">Reading trusted host state…</p></div><div class="event empty" id="event"><div class="label">latest protected operation</div><strong>Waiting for a TrustRun MCP call</strong><code>Start Codex, then ask it to inspect or restart the fixed service.</code></div></article>
+        <article class="panel">
+          <div class="label">01 / Untrusted Sandbox</div>
+          <h2>Codex Sandbox</h2>
+          <div class="rule"><b>Workspace</b><span>isolated /tmp · untrusted</span></div>
+          <div class="rule"><b>Management Network</b><span class="forbidden">not reachable (unshare-all)</span></div>
+          <div class="rule"><b>Gonka / OpenAI Key</b><span class="forbidden">absent (host gateway)</span></div>
+          <div class="rule"><b>Terminal 3 Key</b><span class="forbidden">absent (host session)</span></div>
+          <div class="rule"><b>Executor Bearer</b><span class="forbidden">absent (T3 secret store)</span></div>
+          <div class="rule"><b>Only Authority</b><span class="allowed">service.status · service.restart</span></div>
+        </article>
+
+        <article class="panel">
+          <div class="label">02 / Verified Execution Path</div>
+          <h2>Hardware Capability Chain</h2>
+          <div class="flow">
+            <div class="node" data-node="agent"><i class="number">01</i><b>Codex Agent</b><small>isolated prompt</small></div>
+            <div class="node" data-node="mcp"><i class="number">02</i><b>TrustRun MCP</b><small>fixed tools / session.sock</small></div>
+            <div class="node" data-node="t3"><i class="number">03</i><b>Terminal 3 TEE</b><small>trustrun-v1 @ testnet</small></div>
+            <div class="node" data-node="executor"><i class="number">04</i><b>HTTPS Executor</b><small>TLSv1.3 · 10m cooldown</small></div>
+            <div class="node" data-node="service"><i class="number">05</i><b>my-api.service</b><small>systemd target</small></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="label">03 / Real-Time System State</div>
+          <h2>Live VPS Telemetry</h2>
+
+          <div class="service-card" id="service-card">
+            <span class="label">Target Service</span>
+            <strong class="state" id="service-state">CHECKING</strong>
+            <p id="service-copy">Reading host systemd state…</p>
+          </div>
+
+          <div class="cooldown-card">
+            <div>
+              <div class="label">Durable Restart State</div>
+              <p style="margin: 4px 0 0; font-size: 12px; color: var(--fog);">SQLite WAL guard</p>
+            </div>
+            <span class="cooldown-badge ready" id="cooldown-badge">READY</span>
+          </div>
+
+          <div class="event empty" id="event">
+            <div class="label">Latest Capability Event</div>
+            <strong>Waiting for agent activity</strong>
+            <code>Start Codex, then ask it to diagnose or restart my-api.service.</code>
+          </div>
+        </article>
       </section>
-      <section class="runbook" aria-label="demo runbook"><article class="step"><div class="label">A / stage incident</div><p>From the trusted host, stop only the demo service.</p><code>sudo systemctl stop my-api.service</code></article><article class="step"><div class="label">B / agent recovery</div><p>In the separate TrustRun Codex terminal, use a natural-language recovery prompt.</p><code>The API is unavailable. Diagnose and recover it using only TrustRun.</code></article><article class="step"><div class="label">C / verify boundary</div><p>Show that no direct management route or credential exists inside the sandbox.</p><code>TrustRun is the only privileged path.</code></article></section>
-      <footer><span><strong>TrustRun v1:</strong> a real service recovery through a deliberately narrow authority.</span><span>This page reads sanitized proof events; it cannot invoke privileged actions.</span></footer>
+
+      <section class="runbook" aria-label="demo runbook">
+        <article class="step">
+          <div class="label">Step A / Stage Failure</div>
+          <p>Stop the target service from the trusted host.</p>
+          <code>sudo systemctl stop my-api.service</code>
+        </article>
+        <article class="step">
+          <div class="label">Step B / Natural Recovery</div>
+          <p>Instruct Codex inside the sandbox to resolve the outage.</p>
+          <code>The API is down. Diagnose and restart it using TrustRun.</code>
+        </article>
+        <article class="step">
+          <div class="label">Step C / Verify Boundaries</div>
+          <p>Confirm the cooldown denies repeat restarts and credentials remain absent.</p>
+          <code>pnpm test:boundaries</code>
+        </article>
+      </section>
+
+      <footer>
+        <span><strong>TrustRun v1:</strong> Real service recovery through hardware-anchored capability delegation.</span>
+        <span>Sanitized telemetry presenter · Read-only audit observer</span>
+      </footer>
     </main>
+
     <script>
-      let latest = 0;
-      const state = document.querySelector('#service-state'), card = document.querySelector('#service-card'), copy = document.querySelector('#service-copy'), event = document.querySelector('#event');
-      function light(nodes) { document.querySelectorAll('.node').forEach((node) => node.classList.toggle('live', nodes.includes(node.dataset.node))); }
-      function showEvent(value) { if (!value || value.at === latest) return; latest = value.at; const restart = value.capability === 'service.restart'; event.classList.remove('empty'); const label = document.createElement('div'), title = document.createElement('strong'), result = document.createElement('code'); label.className = 'label'; label.textContent = 'latest protected operation'; title.textContent = value.capability; result.textContent = JSON.stringify(value.result); event.replaceChildren(label, title, result); light(restart ? ['agent','mcp','t3','executor','service'] : ['agent','mcp','t3','executor']); }
-      async function refresh() { try { const data = await fetch('/api/state', { cache:'no-store' }).then((r) => r.json()); const running = data.service === 'running'; state.textContent = running ? 'RUNNING' : 'NOT RUNNING'; copy.textContent = running ? 'Observed from the trusted host.' : 'Incident staged — recovery must use TrustRun.'; card.classList.toggle('down', !running); showEvent(data.event); } catch { state.textContent = 'OFFLINE'; copy.textContent = 'The local presenter is unavailable.'; card.classList.add('down'); } }
-      refresh(); setInterval(refresh, 1200);
+      let latestAt = 0;
+      const stateEl = document.querySelector('#service-state');
+      const cardEl = document.querySelector('#service-card');
+      const copyEl = document.querySelector('#service-copy');
+      const eventEl = document.querySelector('#event');
+      const cooldownBadge = document.querySelector('#cooldown-badge');
+      const contractInfo = document.querySelector('#contract-info');
+
+      function light(nodes) {
+        document.querySelectorAll('.node').forEach((node) => {
+          node.classList.toggle('live', nodes.includes(node.dataset.node));
+        });
+      }
+
+      function formatRelative(ms) {
+        const diffSec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+        if (diffSec < 5) return 'just now';
+        if (diffSec < 60) return `${diffSec}s ago`;
+        return `${Math.floor(diffSec / 60)}m ago`;
+      }
+
+      function showEvent(value) {
+        if (!value) return;
+        latestAt = value.at;
+        const restart = value.capability === 'service.restart';
+        eventEl.classList.remove('empty');
+
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = 'Latest Capability Call';
+
+        const title = document.createElement('strong');
+        title.textContent = `${value.capability} → ${value.result.status}`;
+
+        const code = document.createElement('code');
+        code.textContent = JSON.stringify(value.result, null, 2);
+
+        const time = document.createElement('div');
+        time.className = 'event-time';
+        time.textContent = `${new Date(value.at).toLocaleTimeString()} (${formatRelative(value.at)})`;
+
+        eventEl.replaceChildren(label, title, code, time);
+        light(restart ? ['agent', 'mcp', 't3', 'executor', 'service'] : ['agent', 'mcp', 't3', 'executor']);
+      }
+
+      function updateCooldown(cd) {
+        if (!cd) return;
+        if (cd.status === 'cooldown') {
+          cooldownBadge.className = 'cooldown-badge active';
+          cooldownBadge.textContent = `COOLDOWN (${cd.remainingSeconds}s)`;
+        } else if (cd.status === 'in_flight') {
+          cooldownBadge.className = 'cooldown-badge active';
+          cooldownBadge.textContent = 'IN FLIGHT';
+        } else {
+          cooldownBadge.className = 'cooldown-badge ready';
+          cooldownBadge.textContent = 'READY';
+        }
+      }
+
+      async function refresh() {
+        try {
+          const data = await fetch('/api/state', { cache: 'no-store' }).then((r) => r.json());
+          const running = data.service === 'running';
+          stateEl.textContent = running ? 'RUNNING' : 'NOT RUNNING';
+          copyEl.textContent = running ? 'Service active under systemd.' : 'Incident staged — recovery must use TrustRun.';
+          cardEl.classList.toggle('down', !running);
+
+          if (data.contract) {
+            contractInfo.innerHTML = `<span>Contract: <strong>${data.contract.tail} (v${data.contract.version})</strong></span><span>Target: <strong>${data.contract.service}</strong></span>`;
+          }
+
+          updateCooldown(data.cooldown);
+          showEvent(data.event);
+        } catch {
+          stateEl.textContent = 'OFFLINE';
+          copyEl.textContent = 'Host demo presenter is unreachable.';
+          cardEl.classList.add('down');
+        }
+      }
+
+      refresh();
+      setInterval(refresh, 1000);
     </script>
   </body>
 </html>

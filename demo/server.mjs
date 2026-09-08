@@ -2,17 +2,40 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
 const directory = fileURLToPath(new URL(".", import.meta.url));
 const page = await readFile(join(directory, "index.html"));
 const runtime = join(process.env.XDG_RUNTIME_DIR ?? `/run/user/${process.getuid()}`, "trustrun");
 const trace = join(runtime, "demo-event.json");
+const stateDbPath = process.env.TRUSTRUN_EXECUTOR_STATE ?? "/var/lib/trustrun-executor/state.db";
 
 function serviceStatus() {
   return new Promise((resolve) => {
     execFile("/usr/bin/systemctl", ["is-active", "--quiet", "my-api.service"], (error) => resolve(error ? "not_running" : "running"));
   });
+}
+
+function readCooldown() {
+  try {
+    const db = new DatabaseSync(stateDbPath, { readOnly: true });
+    const row = db.prepare("SELECT cooldown_until_ms, in_flight FROM restart_state WHERE id = 1").get();
+    db.close();
+    if (!row) return { status: "ready", remainingSeconds: 0 };
+    const now = Date.now();
+    if (row.in_flight) return { status: "in_flight", remainingSeconds: 0 };
+    if (row.cooldown_until_ms > now) {
+      return {
+        status: "cooldown",
+        cooldownUntilMs: row.cooldown_until_ms,
+        remainingSeconds: Math.ceil((row.cooldown_until_ms - now) / 1000),
+      };
+    }
+    return { status: "ready", remainingSeconds: 0 };
+  } catch {
+    return { status: "unknown", remainingSeconds: 0 };
+  }
 }
 
 async function event() {
@@ -36,7 +59,19 @@ createServer(async (request, response) => {
     return;
   }
   if (request.url === "/api/state") {
-    response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }).end(JSON.stringify({ service: await serviceStatus(), event: await event() }));
+    const payload = {
+      service: await serviceStatus(),
+      event: await event(),
+      cooldown: readCooldown(),
+      contract: {
+        tail: "trustrun-v1",
+        version: "0.1.5",
+        environment: "Terminal 3 Testnet",
+        address: "0x85ceb62f87bfcb3b5ba83a653913797399e204d3",
+        service: "my-api.service",
+      },
+    };
+    response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }).end(JSON.stringify(payload));
     return;
   }
   response.writeHead(404).end();
