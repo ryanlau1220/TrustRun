@@ -1,9 +1,9 @@
-model_provider = "trustrun-ollama"
-model = "qwen3:4b"
+model_provider = "trustrun-gonka"
+model = "deepseek-ai/DeepSeek-V4-Flash-0731"
 approval_policy = "never"
 
-[model_providers.trustrun-ollama]
-name = "TrustRun local Ollama gateway"
+[model_providers.trustrun-gonka]
+name = "TrustRun Gonka gateway"
 base_url = "http://127.0.0.1:8787/v1"
 env_key = "TRUSTRUN_MODEL_GATEWAY_TOKEN"
 wire_api = "responses"
@@ -11,8 +11,8 @@ wire_api = "responses"
 [mcp_servers.trustrun]
 command = "node"
 args = ["/run/trustrun/mcp-bridge.mjs"]
-enabled_tools = ["service.status", "service.restart"]
 tool_timeout_sec = 120
+default_tools_approval_mode = "approve"
 
 [mcp_servers.trustrun.env]
 TRUSTRUN_SESSION_SOCKET = "/run/trustrun/session.sock"
