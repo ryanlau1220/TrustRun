@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { request as httpsRequest } from "node:https";
+import { request as httpRequest } from "node:http";
 import { unlink } from "node:fs/promises";
 
 const MAX_REQUEST_BYTES = 1024 * 1024;
@@ -35,15 +35,13 @@ function readBody(request, response) {
   });
 }
 
-function forwardToOpenAI(body, apiKey) {
-  return httpsRequest({
-    hostname: "api.openai.com",
-    port: 443,
+function forwardToOllama(body) {
+  return httpRequest({
+    hostname: "127.0.0.1",
+    port: 11434,
     method: "POST",
     path: "/v1/responses",
-    rejectUnauthorized: true,
     headers: {
-      authorization: `Bearer ${apiKey}`,
       accept: "application/json, text/event-stream",
       "content-type": "application/json",
       "content-length": String(body.length),
@@ -52,9 +50,7 @@ function forwardToOpenAI(body, apiKey) {
   });
 }
 
-export function createModelGateway({ apiKey, forward = forwardToOpenAI }) {
-  if (!apiKey) throw new Error("OPENAI_API_KEY is required");
-
+export function createModelGateway({ forward = forwardToOllama } = {}) {
   return createServer(async (request, response) => {
     if (request.method !== "POST" || request.url !== "/v1/responses") return reject(response, 404);
     if (request.headers["content-type"]?.split(";", 1)[0] !== "application/json") return reject(response, 415);
@@ -63,7 +59,7 @@ export function createModelGateway({ apiKey, forward = forwardToOpenAI }) {
 
     let upstream;
     try {
-      upstream = forward(body, apiKey);
+      upstream = forward(body);
     } catch {
       return reject(response, 502);
     }
@@ -101,7 +97,7 @@ async function main() {
   await unlink(socketPath).catch((error) => {
     if (error.code !== "ENOENT") throw error;
   });
-  const server = createModelGateway({ apiKey: process.env.OPENAI_API_KEY });
+  const server = createModelGateway();
   server.listen({ path: socketPath, readableAll: false, writableAll: false });
 }
 

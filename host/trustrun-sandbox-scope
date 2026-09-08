@@ -19,7 +19,6 @@ if [ "${1:-}" = "--codex-demo" ]; then
   codex_bin=/usr/local/lib/trustrun-runtime/codex
   [ -f "$codex_bin" ] && [ -x "$codex_bin" ] && [ "$(stat -c %U "$codex_bin")" = root ] && [ "$(stat -c %a "$codex_bin")" = 755 ] || { echo "run pnpm host:install to install the trusted Codex CLI" >&2; exit 1; }
   model_socket="$(dirname "$socket")/model.sock"
-  [ -r /etc/trustrun/openai.env ] || { echo "TrustRun OpenAI gateway is not configured" >&2; exit 1; }
 fi
 
 unit="trustrun-sandbox-$$"
@@ -31,12 +30,9 @@ trap 'cleanup; exit 130' INT TERM HUP
 trap cleanup EXIT
 
 if [ "$mode" = codex-demo ]; then
-  set -a
-  . /etc/trustrun/openai.env
-  set +a
   gateway_unit="trustrun-model-gateway-$$"
   env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/systemd-run --quiet --collect --unit="$gateway_unit" \
-    --uid="$owner" --gid="$(id -gn "$owner")" --setenv="OPENAI_API_KEY=$OPENAI_API_KEY" --setenv="TRUSTRUN_MODEL_SOCKET=$model_socket" \
+    --uid="$owner" --gid="$(id -gn "$owner")" --setenv="TRUSTRUN_MODEL_SOCKET=$model_socket" \
     --property=KillMode=control-group --property=NoNewPrivileges=yes \
     "$node_bin" /usr/local/lib/trustrun-runtime/model-gateway.mjs
   attempts=0

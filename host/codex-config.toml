@@ -1,9 +1,9 @@
-model_provider = "trustrun-openai"
-model = "gpt-5.3-codex"
+model_provider = "trustrun-ollama"
+model = "qwen3:4b"
 approval_policy = "never"
 
-[model_providers.trustrun-openai]
-name = "TrustRun OpenAI gateway"
+[model_providers.trustrun-ollama]
+name = "TrustRun local Ollama gateway"
 base_url = "http://127.0.0.1:8787/v1"
 env_key = "TRUSTRUN_MODEL_GATEWAY_TOKEN"
 wire_api = "responses"

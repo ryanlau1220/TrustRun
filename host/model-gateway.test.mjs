@@ -21,11 +21,9 @@ const directory = await mkdtemp(join(tmpdir(), "trustrun-model-test-"));
 const socketPath = join(directory, "gateway.sock");
 let forwarded = 0;
 const gateway = createModelGateway({
-  apiKey: "host-only-key",
-  forward(body, apiKey) {
+  forward(body) {
     forwarded += 1;
-    assert.equal(apiKey, "host-only-key");
-    assert.equal(body.toString(), '{"model":"gpt-5.3-codex"}');
+    assert.equal(body.toString(), '{"model":"qwen3:4b"}');
     const upstream = new EventEmitter();
     upstream.end = () => {
       const response = new EventEmitter();
@@ -43,7 +41,7 @@ const unknown = await request(socketPath, "POST /v1/models HTTP/1.1\r\nHost: gat
 assert.match(unknown, /^HTTP\/1\.1 404/);
 assert.equal(forwarded, 0);
 
-const body = '{"model":"gpt-5.3-codex"}';
+const body = '{"model":"qwen3:4b"}';
 const accepted = await request(socketPath, `POST /v1/responses HTTP/1.1\r\nHost: gateway\r\nAuthorization: Bearer sandbox-value\r\nContent-Type: application/json\r\nContent-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`);
 assert.match(accepted, /^HTTP\/1\.1 200/);
 assert.match(accepted, /\{"ok":true\}/);
