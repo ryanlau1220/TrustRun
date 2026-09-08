@@ -7,6 +7,7 @@ if (!socketPath) throw new Error("TRUSTRUN_SESSION_SOCKET is required");
 
 let claimed = false;
 const server = createServer({ allowHalfOpen: false }, async (socket) => {
+  socket.on("error", () => {});
   if (claimed) return socket.destroy();
   claimed = true;
   try {

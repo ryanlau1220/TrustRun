@@ -19,6 +19,7 @@ if (originalTrace === undefined) delete process.env.TRUSTRUN_DEMO_TRACE;
 else process.env.TRUSTRUN_DEMO_TRACE = originalTrace;
 let mcp;
 const proxy = createServer(async (socket) => {
+  socket.on("error", () => {});
   mcp = createMcpServer();
   socket.once("close", () => void mcp.close());
   await mcp.connect(new StdioServerTransport(socket, socket));
@@ -28,6 +29,7 @@ await new Promise((resolve, reject) => {
   proxy.listen(path, resolve);
 });
 const client = createConnection(path);
+client.on("error", () => {});
 const response = await new Promise((resolve, reject) => {
   const timer = setTimeout(() => reject(new Error("MCP initialize timed out")), 3000);
   client.once("data", (data) => {
