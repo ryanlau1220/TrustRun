@@ -20,7 +20,7 @@
     "codex:demo": "/usr/local/lib/trustrun-runtime/run-codex-demo",
     "demo": "node demo/server.mjs",
     "relay:test": "node relay/worker.test.mjs",
-    "relay:deploy": "pnpm dlx wrangler@latest deploy relay/worker.mjs --name trustrun-demo-relay",
+    "relay:deploy": "pnpm dlx wrangler@latest deploy relay/worker.mjs --name trustrun-demo-relay --compatibility-date 2026-09-07",
     "t3:publish": "node scripts/t3-publish.mjs",
     "t3:publish:test": "node scripts/t3-publish.test.mjs",
     "t3:live-proof": "node scripts/t3-live-proof.mjs",

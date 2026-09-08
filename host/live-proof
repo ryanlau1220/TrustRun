@@ -79,7 +79,7 @@ done
 code=
 i=0
 while [ "$i" -lt 60 ]; do
-  code=$(curl --max-time 5 --silent --output /dev/null --write-out '%{http_code}' --request POST "$origin/v1/service/status" || true)
+  code=$(curl --max-time 5 --silent --output /dev/null --write-out '%{http_code}' --request POST --header 'content-type: application/json' --data '{}' "$origin/v1/service/status" || true)
   [ "$code" = 401 ] && break
   i=$((i + 1))
   sleep 1
