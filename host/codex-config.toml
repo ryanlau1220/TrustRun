@@ -13,3 +13,6 @@ command = "node"
 args = ["/run/trustrun/mcp-bridge.mjs"]
 enabled_tools = ["service.status", "service.restart"]
 tool_timeout_sec = 120
+
+[mcp_servers.trustrun.env]
+TRUSTRUN_SESSION_SOCKET = "/run/trustrun/session.sock"

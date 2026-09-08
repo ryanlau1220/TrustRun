@@ -9,6 +9,7 @@
   "scripts": {
     "executor:test": "node executor/test.mjs",
     "mcp:test": "node mcp/server.test.mjs",
+    "codex-config:test": "node host/codex-config.test.mjs",
     "session-proxy:test": "node host/session-proxy.test.mjs",
     "model-gateway:test": "node host/model-gateway.test.mjs",
     "contract:build": "cd contract && cargo build --target wasm32-wasip2 --release",
