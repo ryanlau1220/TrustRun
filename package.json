@@ -19,6 +19,7 @@
     "host:install": "if [ -x /usr/local/libexec/trustrun-install ]; then sudo /usr/local/libexec/trustrun-install; else sudo host/install-root --bootstrap; fi",
     "host:live-proof": "sudo env T3N_API_KEY=\"$T3N_API_KEY\" TRUSTRUN_EXECUTOR_ORIGIN=\"${TRUSTRUN_EXECUTOR_ORIGIN:-quick}\" PATH=\"$PATH\" host/live-proof",
     "sandbox": "/usr/local/lib/trustrun-runtime/run-session",
+    "sandbox:proof": "/usr/local/lib/trustrun-runtime/run-session -- node scripts/verify-sandbox-runtime.mjs",
     "codex:demo": "/usr/local/lib/trustrun-runtime/run-codex-demo",
     "demo": "node demo/server.mjs",
     "t3:publish": "node scripts/t3-publish.mjs",
