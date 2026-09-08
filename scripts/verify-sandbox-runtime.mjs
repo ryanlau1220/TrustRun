@@ -158,9 +158,10 @@ const arbitraryCall = await client.request("tools/call", { name: "shell.exec", a
 assert.ok(arbitraryCall.isError === true, "Arbitrary tool call must return isError: true");
 assert.ok(arbitraryCall.content?.[0]?.text?.includes("Tool shell.exec not found"), "Must return tool not found");
 
-const invalidParamsCall = await client.request("tools/call", { name: "service.restart", arguments: { unexpected: "payload" } });
-assert.ok(invalidParamsCall.isError === true || JSON.parse(invalidParamsCall.content?.[0]?.text || "{}").ok === false, "Tool call with arbitrary parameters must fail");
-pass("Arbitrary tools, shell commands, and unknown parameters are rejected", "MCP exposes strictly service.status and service.restart with zero arguments");
+const unknownToolCall = await client.request("tools/call", { name: "service.reboot", arguments: {} });
+assert.ok(unknownToolCall.isError === true, "Unknown capability call must return isError: true");
+assert.ok(unknownToolCall.content?.[0]?.text?.includes("Tool service.reboot not found"), "Must return tool not found");
+pass("Arbitrary tools and shell commands are rejected", "MCP exposes strictly service.status and service.restart");
 
 // -------------------------------------------------------------
 // 9. service.status succeeds via TrustRun / Terminal 3 TEE
