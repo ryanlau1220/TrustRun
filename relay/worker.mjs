@@ -8,11 +8,11 @@ function reject(code, status) {
 export async function handle(request, fetcher = fetch) {
   const url = new URL(request.url);
   if (request.method !== "POST" || !PATHS.has(url.pathname)) return reject("not_found", 404);
-  if (request.headers.get("content-type") !== "application/json" || request.headers.get("content-length") !== "2") return reject("invalid_request", 400);
+  if (request.headers.get("content-type") !== "application/json" || (await request.text()) !== "{}") return reject("invalid_request", 400);
   try {
     const upstream = await fetcher(`${UPSTREAM}${url.pathname}`, {
       method: "POST",
-      headers: { authorization: request.headers.get("authorization") ?? "", "content-type": "application/json", "content-length": "2" },
+      headers: { authorization: request.headers.get("authorization") ?? "", "content-type": "application/json" },
       body: "{}",
       redirect: "error",
     });
